@@ -1,3 +1,4 @@
+from src.documenter.uml_generator import generate_component_diagram
 from src.documenter.models import ArchitectureModel
 import json
 from pathlib import Path
@@ -62,3 +63,9 @@ connectors = selected_model.get_logical_connectors()
 
 for conn in connectors:
     print(f"- {conn.source} -> {conn.target} ({conn.type})")
+
+output_file = BASE_DIR / "docs" / "generated" / "component_diagram.puml"
+
+generate_component_diagram(selected_model, output_file)
+
+print(f"\nComponent diagram generated at: {output_file}")
