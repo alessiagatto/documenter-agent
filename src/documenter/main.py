@@ -1,3 +1,4 @@
+from src.documenter.planner import create_documentation_plan
 from src.documenter.uml_generator import generate_component_diagram
 from src.documenter.models import ArchitectureModel
 import json
@@ -34,38 +35,40 @@ if __name__ == "__main__":
 
     architecture_data = load_architecture(input_path)
 
+    # 🔹 Elenco architetture disponibili
     available = list_available_architectures(architecture_data)
-
     print("Available architectures:")
     for arch in available:
         print(f"- {arch}")
 
-    selected_id = "Microservices Architecture"
-
     # 🔹 Selezione architettura
+    selected_id = "Microservices Architecture"
     selected_architecture = select_architecture(architecture_data, selected_id)
-
-    # 🔹 Creazione modello interno
     selected_model = ArchitectureModel(selected_architecture)
 
     print(f"\nSelected architecture: {selected_model.id}")
-    print("Available views:")
-    for view_name in selected_model.get_view_names():
-        print(f"- {view_name}")
-        print("\nLogical view components:")
-components = selected_model.get_logical_components()
 
-for comp in components:
-    print(f"- {comp.id}")
+    # 🔹 Pianificazione documentazione
+    plan = create_documentation_plan(selected_model)
 
-print("\nLogical view connectors:")
-connectors = selected_model.get_logical_connectors()
+    print("\nDocumentation Plan:")
+    for view in plan.views:
+        print(f"- {view}")
 
-for conn in connectors:
-    print(f"- {conn.source} -> {conn.target} ({conn.type})")
+    # 🔹 Componenti logical view
+    components = selected_model.get_logical_components()
+    print("\nLogical view components:")
+    for comp in components:
+        print(f"- {comp.id}")
 
-output_file = BASE_DIR / "docs" / "generated" / "component_diagram.puml"
+    # 🔹 Connettori logical view
+    connectors = selected_model.get_logical_connectors()
+    print("\nLogical view connectors:")
+    for conn in connectors:
+        print(f"- {conn.source} -> {conn.target} ({conn.type})")
 
-generate_component_diagram(selected_model, output_file)
+    # 🔹 Generazione diagramma
+    output_file = BASE_DIR / "docs" / "generated" / "component_diagram.puml"
+    generate_component_diagram(selected_model, output_file)
 
-print(f"\nComponent diagram generated at: {output_file}")
+    print(f"\nComponent diagram generated at: {output_file}")
