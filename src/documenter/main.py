@@ -67,8 +67,14 @@ if __name__ == "__main__":
     for conn in connectors:
         print(f"- {conn.source} -> {conn.target} ({conn.type})")
 
-    # 🔹 Generazione diagramma
-    output_file = BASE_DIR / "docs" / "generated" / "component_diagram.puml"
-    generate_component_diagram(selected_model, output_file)
+    # 🔹 Generazione artefatti in base al piano
+    generated_files = []
 
-    print(f"\nComponent diagram generated at: {output_file}")
+    if "logical_view" in plan.views:
+        component_output = BASE_DIR / "docs" / "generated" / "component_diagram.puml"
+        generate_component_diagram(selected_model, component_output)
+        generated_files.append(component_output)
+
+    print("\nGenerated artifacts:")
+    for file in generated_files:
+        print(f"- {file}")
