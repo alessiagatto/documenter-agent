@@ -1,0 +1,13 @@
+{
+  "view_to_diagram_mapping": {
+    "logical_view": "component_diagram",
+    "deployment_view": "deployment_diagram",
+    "runtime_view": "sequence_diagram",
+    "context_view": "context_diagram",
+    "security_view": "security_diagram"
+  },
+  "layout_rules": {
+    "max_components_per_view": 7,
+    "default_direction": "top-down"
+  }
+}

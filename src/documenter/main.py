@@ -1,3 +1,4 @@
+from src.documenter.kb_loader import load_knowledge_base
 from src.documenter.planner import create_documentation_plan
 from src.documenter.uml_generator import generate_component_diagram
 from src.documenter.models import ArchitectureModel
@@ -31,13 +32,23 @@ def select_architecture(data: dict, architecture_id: str) -> dict:
 
 if __name__ == "__main__":
     BASE_DIR = Path(__file__).resolve().parent.parent.parent
-    input_path = BASE_DIR / "data" / "input" / "finalArchitecture.json"
 
+    # 🔹 Caricamento Knowledge Base
+    kb_path = BASE_DIR / "data" / "kb" / "documentation_rules.json"
+    kb = load_knowledge_base(kb_path)
+
+    print("\nKnowledge Base loaded.")
+    print("View to diagram mapping:")
+    for view, diagram in kb.view_to_diagram_mapping.items():
+        print(f"- {view} -> {diagram}")
+
+    # 🔹 Caricamento architettura
+    input_path = BASE_DIR / "data" / "input" / "finalArchitecture.json"
     architecture_data = load_architecture(input_path)
 
     # 🔹 Elenco architetture disponibili
     available = list_available_architectures(architecture_data)
-    print("Available architectures:")
+    print("\nAvailable architectures:")
     for arch in available:
         print(f"- {arch}")
 
@@ -55,19 +66,19 @@ if __name__ == "__main__":
     for view in plan.views:
         print(f"- {view}")
 
-    # 🔹 Componenti logical view
+    # 🔹 Componenti
     components = selected_model.get_logical_components()
     print("\nLogical view components:")
     for comp in components:
         print(f"- {comp.id}")
 
-    # 🔹 Connettori logical view
+    # 🔹 Connettori
     connectors = selected_model.get_logical_connectors()
     print("\nLogical view connectors:")
     for conn in connectors:
         print(f"- {conn.source} -> {conn.target} ({conn.type})")
 
-    # 🔹 Generazione artefatti in base al piano
+    # 🔹 Generazione dinamica artefatti
     generated_files = []
 
     if "logical_view" in plan.views:
