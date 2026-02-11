@@ -78,6 +78,19 @@ if __name__ == "__main__":
     for conn in connectors:
         print(f"- {conn.source} -> {conn.target} ({conn.type})")
 
+    # 🔹 Controllo layout intelligente
+    max_components = kb.layout_rules.get("max_components_per_view", 10)
+
+    components = selected_model.get_logical_components()
+
+    if len(components) > max_components:
+        print("\n[LAYOUT WARNING]")
+        print(f"Logical view has {len(components)} components.")
+        print("It exceeds max_components_per_view.")
+        print("Consider splitting into multiple diagrams.")
+    else:
+        print("\nLayout check passed.")
+
     generated_files = []
 
     for view in plan.views:
