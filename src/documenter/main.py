@@ -1,3 +1,4 @@
+from src.documenter.document_builder import build_document_bundle
 from src.documenter.uml_generator import generate_deployment_diagram
 from src.documenter.kb_loader import load_knowledge_base
 from src.documenter.planner import create_documentation_plan
@@ -116,3 +117,15 @@ for view in plan.views:
 print("\nGenerated artifacts:")
 for file in generated_files:
     print(f"- {file}")
+
+# 🔹 Costruzione documento strutturato
+document_output = BASE_DIR / "docs" / "generated" / "architecture_document.json"
+
+build_document_bundle(
+    selected_model,
+    plan,
+    generated_files,
+    document_output
+)
+
+print(f"\nArchitecture document generated at: {document_output}")
