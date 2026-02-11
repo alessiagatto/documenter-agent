@@ -57,3 +57,8 @@ components = selected_model.get_logical_components()
 for comp in components:
     print(f"- {comp.id}")
 
+print("\nLogical view connectors:")
+connectors = selected_model.get_logical_connectors()
+
+for conn in connectors:
+    print(f"- {conn.source} -> {conn.target} ({conn.type})")

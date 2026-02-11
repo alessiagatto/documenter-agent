@@ -14,6 +14,18 @@ class Component:
     def __repr__(self):
         return f"Component(id={self.id})"
 
+class Connector:
+    """
+    Internal representation of a relationship between components.
+    """
+
+    def __init__(self, connector_data: dict):
+        self.source: str = connector_data.get("source") or connector_data.get("name")
+        self.target: str = connector_data.get("target")
+        self.type: str = connector_data.get("type")
+
+    def __repr__(self):
+        return f"Connector({self.source} -> {self.target})"
 
 class ArchitectureModel:
     """
@@ -35,3 +47,9 @@ class ArchitectureModel:
         logical_view = self.views.get("logical_view", {})
         components_data = logical_view.get("components", [])
         return [Component(c) for c in components_data]
+    
+    def get_logical_connectors(self) -> List[Connector]:
+        logical_view = self.views.get("logical_view", {})
+        connectors_data = logical_view.get("connectors", [])
+        return [Connector(c) for c in connectors_data]
+
