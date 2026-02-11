@@ -78,13 +78,20 @@ if __name__ == "__main__":
     for conn in connectors:
         print(f"- {conn.source} -> {conn.target} ({conn.type})")
 
-    # 🔹 Generazione dinamica artefatti
     generated_files = []
 
-    if "logical_view" in plan.views:
-        component_output = BASE_DIR / "docs" / "generated" / "component_diagram.puml"
-        generate_component_diagram(selected_model, component_output)
-        generated_files.append(component_output)
+    for view in plan.views:
+        diagram_type = kb.view_to_diagram_mapping.get(view)
+
+    if diagram_type == "component_diagram":
+        output_file = BASE_DIR / "docs" / "generated" / f"{diagram_type}.puml"
+        generate_component_diagram(selected_model, output_file)
+        generated_files.append(output_file)
+
+    # Per ora gli altri diagrammi non sono ancora implementati
+    else:
+        print(f"\n[INFO] Diagram type '{diagram_type}' not yet implemented.")
+
 
     print("\nGenerated artifacts:")
     for file in generated_files:
