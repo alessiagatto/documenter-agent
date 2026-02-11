@@ -1,3 +1,4 @@
+from src.documenter.uml_generator import generate_deployment_diagram
 from src.documenter.kb_loader import load_knowledge_base
 from src.documenter.planner import create_documentation_plan
 from src.documenter.uml_generator import generate_component_diagram
@@ -93,19 +94,25 @@ if __name__ == "__main__":
 
     generated_files = []
 
-    for view in plan.views:
-        diagram_type = kb.view_to_diagram_mapping.get(view)
+for view in plan.views:
+    diagram_type = kb.view_to_diagram_mapping.get(view)
+
+    print(f"\n[DEBUG] View: {view}")
+    print(f"[DEBUG] Diagram type from KB: {diagram_type}")
 
     if diagram_type == "component_diagram":
         output_file = BASE_DIR / "docs" / "generated" / f"{diagram_type}.puml"
         generate_component_diagram(selected_model, output_file)
         generated_files.append(output_file)
 
-    # Per ora gli altri diagrammi non sono ancora implementati
+    elif diagram_type == "deployment_diagram":
+        output_file = BASE_DIR / "docs" / "generated" / f"{diagram_type}.puml"
+        generate_deployment_diagram(selected_model, output_file)
+        generated_files.append(output_file)
+
     else:
-        print(f"\n[INFO] Diagram type '{diagram_type}' not yet implemented.")
+        print(f"[INFO] Diagram type '{diagram_type}' not yet implemented.")
 
-
-    print("\nGenerated artifacts:")
-    for file in generated_files:
-        print(f"- {file}")
+print("\nGenerated artifacts:")
+for file in generated_files:
+    print(f"- {file}")
