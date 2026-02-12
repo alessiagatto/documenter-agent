@@ -53,3 +53,18 @@ class ArchitectureModel:
         connectors_data = logical_view.get("connectors", [])
         return [Connector(c) for c in connectors_data]
 
+    def to_dict(self) -> dict:
+        return {
+            "architecture_id": self.id,
+            "architecture_name": self.name,
+            "views": self.get_view_names(),
+            "components": [c.id for c in self.get_logical_components()],
+            "relationships": [
+                {
+                    "source": conn.source,
+                    "target": conn.target,
+                    "type": conn.type
+                }
+                for conn in self.get_logical_connectors()
+            ]
+        }

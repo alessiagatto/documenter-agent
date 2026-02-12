@@ -1,3 +1,4 @@
+from src.documenter.lm_integration import generate_description
 from src.documenter.document_builder import build_document_bundle
 from src.documenter.uml_generator import generate_deployment_diagram
 from src.documenter.kb_loader import load_knowledge_base
@@ -129,3 +130,9 @@ build_document_bundle(
 )
 
 print(f"\nArchitecture document generated at: {document_output}")
+
+# 🔹 Generazione descrizione testuale dell'architettura
+description = generate_description(selected_model.to_dict())
+
+print("\nArchitecture Description:")
+print(description)
