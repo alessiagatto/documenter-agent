@@ -1,3 +1,6 @@
+from src.documenter.uml_generator import generate_security_diagram
+from src.documenter.uml_generator import generate_sequence_diagram
+from src.documenter.uml_generator import generate_context_diagram
 from src.documenter.lm_integration import generate_description
 from src.documenter.document_builder import build_document_bundle
 from src.documenter.uml_generator import generate_deployment_diagram
@@ -36,7 +39,7 @@ def select_architecture(data: dict, architecture_id: str) -> dict:
 if __name__ == "__main__":
     BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-    # 🔹 Caricamento Knowledge Base
+    # Caricamento Knowledge Base
     kb_path = BASE_DIR / "data" / "kb" / "documentation_rules.json"
     kb = load_knowledge_base(kb_path)
 
@@ -45,94 +48,82 @@ if __name__ == "__main__":
     for view, diagram in kb.view_to_diagram_mapping.items():
         print(f"- {view} -> {diagram}")
 
-    # 🔹 Caricamento architettura
+    # Caricamento architettura
     input_path = BASE_DIR / "data" / "input" / "finalArchitecture.json"
     architecture_data = load_architecture(input_path)
 
-    # 🔹 Elenco architetture disponibili
     available = list_available_architectures(architecture_data)
     print("\nAvailable architectures:")
     for arch in available:
         print(f"- {arch}")
 
-    # 🔹 Selezione architettura
     selected_id = "Microservices Architecture"
     selected_architecture = select_architecture(architecture_data, selected_id)
     selected_model = ArchitectureModel(selected_architecture)
 
     print(f"\nSelected architecture: {selected_model.id}")
 
-    # 🔹 Pianificazione documentazione
+    # Pianificazione documentazione
     plan = create_documentation_plan(selected_model)
 
     print("\nDocumentation Plan:")
     for view in plan.views:
         print(f"- {view}")
 
-    # 🔹 Componenti
     components = selected_model.get_logical_components()
     print("\nLogical view components:")
     for comp in components:
         print(f"- {comp.id}")
 
-    # 🔹 Connettori
     connectors = selected_model.get_logical_connectors()
     print("\nLogical view connectors:")
     for conn in connectors:
         print(f"- {conn.source} -> {conn.target} ({conn.type})")
 
-    # 🔹 Controllo layout intelligente
     max_components = kb.layout_rules.get("max_components_per_view", 10)
-
     components = selected_model.get_logical_components()
 
     if len(components) > max_components:
-        print("\n[LAYOUT WARNING]")
-        print(f"Logical view has {len(components)} components.")
-        print("It exceeds max_components_per_view.")
-        print("Consider splitting into multiple diagrams.")
+        print("\n[LAYOUT WARNING] Logical view exceeds max components per view.")
     else:
         print("\nLayout check passed.")
 
     generated_files = []
 
-for view in plan.views:
-    diagram_type = kb.view_to_diagram_mapping.get(view)
+    # Genera tutti i diagrammi
+    for view in plan.views:
+        diagram_type = kb.view_to_diagram_mapping.get(view)
+        print(f"\n[DEBUG] View: {view}")
+        print(f"[DEBUG] Diagram type from KB: {diagram_type}")
 
-    print(f"\n[DEBUG] View: {view}")
-    print(f"[DEBUG] Diagram type from KB: {diagram_type}")
+        if diagram_type == "component_diagram":
+            output_file = BASE_DIR / "docs" / "generated" / f"{diagram_type}.puml"
+            generate_component_diagram(selected_model, output_file)
+            generated_files.append(output_file)
 
-    if diagram_type == "component_diagram":
-        output_file = BASE_DIR / "docs" / "generated" / f"{diagram_type}.puml"
-        generate_component_diagram(selected_model, output_file)
-        generated_files.append(output_file)
+        elif diagram_type == "deployment_diagram":
+            output_file = BASE_DIR / "docs" / "generated" / f"{diagram_type}.puml"
+            generate_deployment_diagram(selected_model, output_file)
+            generated_files.append(output_file)
 
-    elif diagram_type == "deployment_diagram":
-        output_file = BASE_DIR / "docs" / "generated" / f"{diagram_type}.puml"
-        generate_deployment_diagram(selected_model, output_file)
-        generated_files.append(output_file)
+        elif diagram_type == "context_diagram":
+            output_file = BASE_DIR / "docs" / "generated" / f"{diagram_type}.puml"
+            generate_context_diagram(selected_model, output_file)
+            generated_files.append(output_file)
 
-    else:
-        print(f"[INFO] Diagram type '{diagram_type}' not yet implemented.")
+        elif diagram_type == "sequence_diagram":
+            output_file = BASE_DIR / "docs" / "generated" / f"{diagram_type}.puml"
+            generate_sequence_diagram(selected_model, output_file)
+            generated_files.append(output_file)
 
-print("\nGenerated artifacts:")
-for file in generated_files:
-    print(f"- {file}")
+        elif diagram_type == "security_diagram":
+            output_file = BASE_DIR / "docs" / "generated" / f"{diagram_type}.puml"
+            generate_security_diagram(selected_model, output_file)
+            generated_files.append(output_file)
 
-# 🔹 Costruzione documento strutturato
-document_output = BASE_DIR / "docs" / "generated" / "architecture_document.json"
+        else:
+            print(f"[INFO] Diagram type '{diagram_type}' not yet implemented.")
 
-build_document_bundle(
-    selected_model,
-    plan,
-    generated_files,
-    document_output
-)
-
-print(f"\nArchitecture document generated at: {document_output}")
-
-# 🔹 Generazione descrizione testuale dell'architettura
-description = generate_description(selected_model.to_dict())
-
-print("\nArchitecture Description:")
-print(description)
+    print("\nGenerated artifacts:")
+    for file in generated_files:
+        print(f"- {file}")
