@@ -1,0 +1,17 @@
+@startuml
+actor User
+entity "Web Server" as WebServer
+entity "Application Server" as AppServer
+entity "Database Server" as DBServer
+
+User -> WebServer : Request
+WebServer -> AppServer : Forward request
+AppServer -> DBServer : Access database
+AppServer -> WebServer : Return response
+WebServer -> User : Return response
+
+note right of WebServer
+    SSL/TLS encryption
+end note
+
+@enduml

@@ -12,6 +12,3 @@ Thumbs.db
 
 # VS Code
 .vscode/
-
-# Generated documentation (opzionale, se non vuoi versionare output)
-docs/generated/

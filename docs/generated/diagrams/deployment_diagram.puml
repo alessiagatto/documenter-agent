@@ -1,0 +1,20 @@
+@startuml
+skinparam nodeStyle rectangle
+
+node "Web Server"
+node "Application Server"
+node "Database Server"
+node "Message Queue Server"
+
+"Catalog Service" --> "Application Server"
+"Cart Service" --> "Application Server"
+"Order Service" --> "Application Server"
+"User Service" --> "Application Server"
+"Payment Service" --> "Application Server"
+"Shipping Service" --> "Application Server"
+"Database Interface" --> "Database Server"
+"Authentication Service" --> "Application Server"
+"Payment Gateway Adapters" --> "Application Server"
+"Shipping Provider Adapters" --> "Application Server"
+"Message Queue" --> "Message Queue Server"
+@enduml

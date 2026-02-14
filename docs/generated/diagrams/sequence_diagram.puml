@@ -1,0 +1,13 @@
+@startuml
+actor User
+participant "Cart Service" as CartService
+participant "Order Service" as OrderService
+participant "Payment Service" as PaymentService
+participant "Shipping Service" as ShippingService
+
+User -> CartService : Add item to cart
+CartService -> OrderService : Create order
+OrderService -> PaymentService : Process payment
+OrderService -> ShippingService : Generate shipping label
+
+@enduml
