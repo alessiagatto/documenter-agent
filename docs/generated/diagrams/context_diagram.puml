@@ -1,17 +1,15 @@
 @startuml
-actor User
-entity "Web Server" as WebServer
-entity "Application Server" as AppServer
-entity "Database Server" as DBServer
+skinparam rectangleStyle rounded
 
-User -> WebServer : Request
-WebServer -> AppServer : Forward request
-AppServer -> DBServer : Access database
-AppServer -> WebServer : Return response
-WebServer -> User : Return response
+rectangle "Catalog Service" as CatalogService
+rectangle "Cart Service" as CartService
+rectangle "Order Service" as OrderService
+rectangle "User Service" as UserService
+rectangle "Payment Service" as PaymentService
+rectangle "Shipping Service" as ShippingService
 
-note right of WebServer
-    SSL/TLS encryption
-end note
-
+CatalogService --> UserService
+CartService --> UserService
+OrderService --> PaymentService
+OrderService --> ShippingService
 @enduml

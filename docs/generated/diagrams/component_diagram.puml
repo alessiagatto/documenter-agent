@@ -1,15 +1,15 @@
 @startuml
 skinparam componentStyle rectangle
 
-component "Catalog Service"
-component "Cart Service"
-component "Order Service"
-component "User Service"
-component "Payment Service"
-component "Shipping Service"
+component "Catalog Service" as CatalogService
+component "Cart Service" as CartService
+component "Order Service" as OrderService
+component "User Service" as UserService
+component "Payment Service" as PaymentService
+component "Shipping Service" as ShippingService
 
-"Catalog Service" --> "User Service" : space read/write
-"Cart Service" --> "User Service" : space read/write
-"Order Service" --> "Payment Service" : space read/write
-"Order Service" --> "Shipping Service" : space read/write
+CatalogService --> UserService : space read/write
+CartService --> UserService : space read/write
+OrderService --> PaymentService : space read/write
+OrderService --> ShippingService : space read/write
 @enduml

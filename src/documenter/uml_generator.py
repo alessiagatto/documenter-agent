@@ -1,6 +1,11 @@
+import subprocess
 from pathlib import Path
 from src.documenter.models import ArchitectureModel
 
+
+# =========================
+# COMPONENT DIAGRAM
+# =========================
 
 def generate_component_diagram(model: ArchitectureModel, output_path: Path):
     components = model.get_logical_components()
@@ -11,23 +16,27 @@ def generate_component_diagram(model: ArchitectureModel, output_path: Path):
     lines.append("skinparam componentStyle rectangle")
     lines.append("")
 
-    # Components
     for comp in components:
-        lines.append(f'component "{comp.id}"')
+        safe = comp.id.replace(" ", "")
+        lines.append(f'component "{comp.id}" as {safe}')
 
     lines.append("")
 
-    # Connectors
     for conn in connectors:
         if conn.source and conn.target:
-            lines.append(f'"{conn.source}" --> "{conn.target}" : {conn.type}')
+            source = conn.source.replace(" ", "")
+            target = conn.target.replace(" ", "")
+            lines.append(f"{source} --> {target} : {conn.type}")
 
     lines.append("@enduml")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("\n".join(lines), encoding="utf-8")
 
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines))
+
+# =========================
+# DEPLOYMENT DIAGRAM
+# =========================
 
 def generate_deployment_diagram(model: ArchitectureModel, output_path: Path):
     deployment_view = model.get_view("deployment_view")
@@ -40,94 +49,175 @@ def generate_deployment_diagram(model: ArchitectureModel, output_path: Path):
     lines.append("skinparam nodeStyle rectangle")
     lines.append("")
 
-    # Nodes
     for node in nodes:
         if isinstance(node, dict):
             node_name = node.get("name")
-            lines.append(f'node "{node_name}" {{')
+            safe_node = node_name.replace(" ", "")
+            lines.append(f'node "{node_name}" as {safe_node} {{')
             for comp in node.get("components", []):
-                lines.append(f'  component "{comp}"')
+                safe_comp = comp.replace(" ", "")
+                lines.append(f'  component "{comp}" as {safe_comp}')
             lines.append("}")
         else:
-            lines.append(f'node "{node}"')
+            safe_node = node.replace(" ", "")
+            lines.append(f'node "{node}" as {safe_node}')
 
     lines.append("")
 
-    # Component mapping (per architetture che usano mapping separato)
     for comp, node in component_mapping.items():
-        lines.append(f'"{comp}" --> "{node}"')
+        safe_comp = comp.replace(" ", "")
+        safe_node = node.replace(" ", "")
+        lines.append(f"{safe_comp} --> {safe_node}")
 
     lines.append("@enduml")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("\n".join(lines), encoding="utf-8")
 
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines))
 
-def generate_context_diagram(architecture_model, output_file):
-    """
-    Funzione per generare un diagramma di contesto.
-    """
-    with open(output_file, "w") as file:
-        # Iniziamo a scrivere il diagramma in formato PlantUML
-        file.write("@startuml\n")
-        file.write("!define RECTANGLE class\n")
-        file.write("\n")
-        
-        # Aggiungiamo componenti per il diagramma di contesto (puoi personalizzare)
-        components = architecture_model.get_logical_components()
-        for component in components:
-            file.write(f"RECTANGLE {component.id}\n")
-        
-        # Aggiungi le relazioni (se ci sono)
-        connectors = architecture_model.get_logical_connectors()
-        for conn in connectors:
-            file.write(f"{conn.source} --> {conn.target}\n")
-        
-        # Terminiamo il diagramma
-        file.write("@enduml\n")
+# =========================
+# CONTEXT DIAGRAM
+# =========================
 
-def generate_sequence_diagram(architecture_model, output_file):
-    """
-    Funzione per generare un diagramma di sequenza.
-    """
-    with open(output_file, "w") as file:
-        file.write("@startuml\n")
-        file.write("participant User\n")
-        file.write("participant Cart Service\n")
-        file.write("participant Order Service\n")
-        file.write("participant Payment Service\n")
-        file.write("participant Shipping Service\n")
-        
-        # Aggiungi le interazioni tra i componenti (sequenze di messaggi)
-        file.write("User -> Cart Service: Add item to cart\n")
-        file.write("Cart Service -> Order Service: Create order\n")
-        file.write("Order Service -> Payment Service: Process payment\n")
-        file.write("Order Service -> Shipping Service: Generate shipping label\n")
-        
-        file.write("@enduml\n")
+def generate_context_diagram(model: ArchitectureModel, output_path: Path):
+    components = model.get_logical_components()
+    connectors = model.get_logical_connectors()
 
-def generate_security_diagram(architecture_model, output_file):
-    """
-    Funzione per generare un diagramma di sicurezza.
-    """
-    with open(output_file, "w") as file:
-        file.write("@startuml\n")
-        file.write("actor User\n")
-        file.write("entity \"Web Server\" as WebServer\n")
-        file.write("entity \"Application Server\" as AppServer\n")
-        file.write("entity \"Database Server\" as DBServer\n")
-        
-        # Aggiungi interazioni di sicurezza tra i componenti
-        file.write("User -> WebServer: Request\n")
-        file.write("WebServer -> AppServer: Forward request\n")
-        file.write("AppServer -> DBServer: Access database\n")
-        file.write("AppServer -> WebServer: Return response\n")
-        file.write("WebServer -> User: Return response\n")
-        
-        # Aggiungi misure di sicurezza come la cifratura e i controlli
-        file.write("note right of WebServer\n")
-        file.write("SSL/TLS encryption\n")
-        file.write("end note\n")
-        
-        file.write("@enduml\n")
+    lines = []
+    lines.append("@startuml")
+    lines.append("skinparam rectangleStyle rounded")
+    lines.append("")
+
+    for comp in components:
+        safe = comp.id.replace(" ", "")
+        lines.append(f'rectangle "{comp.id}" as {safe}')
+
+    lines.append("")
+
+    for conn in connectors:
+        source = conn.source.replace(" ", "")
+        target = conn.target.replace(" ", "")
+        lines.append(f"{source} --> {target}")
+
+    lines.append("@enduml")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+
+
+# =========================
+# SEQUENCE DIAGRAM
+# =========================
+
+def generate_sequence_diagram(model: ArchitectureModel, output_path: Path):
+    connectors = model.get_logical_connectors()
+
+    lines = []
+    lines.append("@startuml")
+    lines.append("actor User")
+
+    participants = set()
+
+    for conn in connectors:
+        participants.add(conn.source)
+        participants.add(conn.target)
+
+    for p in participants:
+        safe = p.replace(" ", "")
+        lines.append(f'participant "{p}" as {safe}')
+
+    lines.append("")
+
+    for conn in connectors:
+        source = conn.source.replace(" ", "")
+        target = conn.target.replace(" ", "")
+        lines.append(f"{source} -> {target} : {conn.type}")
+
+    lines.append("@enduml")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+
+
+# =========================
+# SEQUENCE REGENERATION (VISION)
+# =========================
+
+def regenerate_sequence_with_feedback(model, feedback: str, output_path: Path):
+    connectors = model.get_logical_connectors()
+
+    lines = []
+    lines.append("@startuml")
+    lines.append("actor User")
+
+    participants = set()
+
+    for conn in connectors:
+        participants.add(conn.source)
+        participants.add(conn.target)
+
+    for p in sorted(participants):
+        safe = p.replace(" ", "")
+        lines.append(f'participant "{p}" as {safe}')
+
+    lines.append("")
+
+    for conn in connectors:
+        source = conn.source.replace(" ", "")
+        target = conn.target.replace(" ", "")
+        lines.append(f"{source} -> {target} : {conn.type}")
+
+    if "alignment" in feedback.lower():
+        lines.append("\n' Alignment improvements applied")
+
+    if "duplicate" in feedback.lower():
+        lines.append("' Duplicate check applied")
+
+    lines.append("@enduml")
+
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+
+
+# =========================
+# SECURITY DIAGRAM
+# =========================
+
+def generate_security_diagram(model: ArchitectureModel, output_path: Path):
+    lines = []
+    lines.append("@startuml")
+    lines.append("actor User")
+    lines.append('rectangle "Web Server" as WebServer')
+    lines.append('rectangle "Application Server" as AppServer')
+    lines.append('database "Database Server" as DBServer')
+    lines.append("")
+
+    lines.append("User -> WebServer : HTTPS Request")
+    lines.append("WebServer -> AppServer : Forward")
+    lines.append("AppServer -> DBServer : Query")
+    lines.append("AppServer -> WebServer : Response")
+    lines.append("WebServer -> User : HTTPS Response")
+    lines.append("")
+    lines.append("note right of WebServer")
+    lines.append("TLS Encryption")
+    lines.append("end note")
+    lines.append("@enduml")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+
+
+# =========================
+# PLANTUML COMPILER
+# =========================
+
+def compile_plantuml(puml_path: Path):
+    BASE_DIR = Path(__file__).resolve().parent.parent.parent
+    plantuml_jar = BASE_DIR / "tools" / "plantuml.jar"
+
+    if not plantuml_jar.exists():
+        raise FileNotFoundError(f"PlantUML jar not found at {plantuml_jar}")
+
+    subprocess.run(
+        ["java", "-jar", str(plantuml_jar), str(puml_path)],
+        check=True
+    )

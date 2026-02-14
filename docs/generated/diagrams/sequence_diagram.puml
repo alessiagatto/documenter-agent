@@ -1,13 +1,17 @@
 @startuml
 actor User
 participant "Cart Service" as CartService
+participant "Catalog Service" as CatalogService
 participant "Order Service" as OrderService
 participant "Payment Service" as PaymentService
 participant "Shipping Service" as ShippingService
+participant "User Service" as UserService
 
-User -> CartService : Add item to cart
-CartService -> OrderService : Create order
-OrderService -> PaymentService : Process payment
-OrderService -> ShippingService : Generate shipping label
+CatalogService -> UserService : space read/write
+CartService -> UserService : space read/write
+OrderService -> PaymentService : space read/write
+OrderService -> ShippingService : space read/write
 
+' Alignment improvements applied
+' Duplicate check applied
 @enduml

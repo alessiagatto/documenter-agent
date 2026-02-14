@@ -1,25 +1,16 @@
 @startuml
 actor User
-entity "Web Server" as WebServer
-entity "Application Server" as AppServer
-entity "Database Server" as DBServer
+rectangle "Web Server" as WebServer
+rectangle "Application Server" as AppServer
+database "Database Server" as DBServer
 
-User -> WebServer : Request
-WebServer -> AppServer : Forward request
-AppServer -> DBServer : Access database
-AppServer -> WebServer : Return response
-WebServer -> User : Return response
+User -> WebServer : HTTPS Request
+WebServer -> AppServer : Forward
+AppServer -> DBServer : Query
+AppServer -> WebServer : Response
+WebServer -> User : HTTPS Response
 
 note right of WebServer
-    SSL/TLS encryption
+TLS Encryption
 end note
-
-note right of AppServer
-    Authentication and Authorization
-end note
-
-note right of DBServer
-    Data encryption at rest
-end note
-
 @enduml
