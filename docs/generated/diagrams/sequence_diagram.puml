@@ -1,11 +1,10 @@
 @startuml
-actor "User" as User
-participant "Cart Service" as CartService
 participant "Catalog Service" as CatalogService
+participant "Cart Service" as CartService
 participant "Order Service" as OrderService
+participant "User Service" as UserService
 participant "Payment Service" as PaymentService
 participant "Shipping Service" as ShippingService
-participant "User Service" as UserService
 
 CatalogService -> UserService : space read/write
 CartService -> UserService : space read/write

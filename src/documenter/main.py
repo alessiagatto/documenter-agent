@@ -1,3 +1,4 @@
+from src.documenter.vision_memory import save_vision_feedback
 from src.documenter.uml_generator import vision_refine_diagram
 from src.documenter.vision_analyzer import analyze_diagram
 from src.documenter.uml_generator import (
@@ -9,8 +10,6 @@ from src.documenter.uml_generator import (
     regenerate_sequence_with_feedback,
     compile_plantuml
 )
-from src.documenter.lm_integration import generate_description
-from src.documenter.document_builder import build_document_bundle
 from src.documenter.kb_loader import load_knowledge_base
 from src.documenter.planner import create_documentation_plan
 from src.documenter.models import ArchitectureModel
@@ -95,15 +94,10 @@ if __name__ == "__main__":
     else:
         print("\nLayout check passed.")
 
-    # -----------------------------
-    # 5️⃣ Diagram Quality Rules
-    # -----------------------------
-    diagram_quality_rules = getattr(kb, "diagram_quality_rules", {})
-
     generated_files = []
 
         # -----------------------------
-    # 6️⃣ Generate Diagrams
+    # 5️⃣ Generate Diagrams
     # -----------------------------
     for view in plan.views:
 
@@ -114,128 +108,69 @@ if __name__ == "__main__":
 
         output_file = BASE_DIR / "docs" / "generated" / "diagrams" / f"{diagram_type}.puml"
 
-        # ==============================
-        # COMPONENT DIAGRAM
-        # ==============================
-        if diagram_type == "component_diagram":
+        # ==========================================
+        # SEQUENCE DIAGRAM (Vision Self-Refinement)
+        # ==========================================
+        if diagram_type == "sequence_diagram":
 
-            def _gen():
-                generate_component_diagram(selected_model, output_file)
+            # 1️⃣ Generate
+            generate_sequence_diagram(selected_model, output_file)
 
-            feedback = vision_refine_diagram(
-                diagram_type="component_diagram",
-                puml_path=output_file,
-                generate_fn=_gen,
-                analyze_fn=analyze_diagram,
-                regenerate_fn=None,
-                compile_after_regen=False
-            )
+            # 2️⃣ Compile
+            compile_plantuml(output_file)
+            png_path = output_file.with_suffix(".png")
 
-            print("\nVision Feedback (component):\n",
-                  feedback["choices"][0]["message"]["content"])
+            # 3️⃣ Analyze with Vision
+            feedback = analyze_diagram(str(png_path))
 
-            generated_files.append(output_file)
+            if isinstance(feedback, dict) and "choices" in feedback:
+                vision_text = feedback["choices"][0]["message"]["content"]
 
-        # ==============================
-        # DEPLOYMENT DIAGRAM
-        # ==============================
-        elif diagram_type == "deployment_diagram":
+                print("\nVision Feedback (sequence):\n", vision_text)
 
-            def _gen():
-                generate_deployment_diagram(selected_model, output_file)
-
-            feedback = vision_refine_diagram(
-                diagram_type="deployment_diagram",
-                puml_path=output_file,
-                generate_fn=_gen,
-                analyze_fn=analyze_diagram,
-                regenerate_fn=None,
-                compile_after_regen=False
-            )
-
-            print("\nVision Feedback (deployment):\n",
-                  feedback["choices"][0]["message"]["content"])
-
-            generated_files.append(output_file)
-
-        # ==============================
-        # CONTEXT DIAGRAM
-        # ==============================
-        elif diagram_type == "context_diagram":
-
-            def _gen():
-                generate_context_diagram(selected_model, output_file)
-
-            feedback = vision_refine_diagram(
-                diagram_type="context_diagram",
-                puml_path=output_file,
-                generate_fn=_gen,
-                analyze_fn=analyze_diagram,
-                regenerate_fn=None,
-                compile_after_regen=False
-            )
-
-            print("\nVision Feedback (context):\n",
-                  feedback["choices"][0]["message"]["content"])
-
-            generated_files.append(output_file)
-
-        # ==============================
-        # SEQUENCE DIAGRAM
-        # ==============================
-        elif diagram_type == "sequence_diagram":
-
-            def _gen():
-                generate_sequence_diagram(selected_model, output_file)
-
-            def _regen(vision_text: str):
+                # 4️⃣ Regenerate improved version
                 regenerate_sequence_with_feedback(
                     selected_model,
                     vision_text,
                     output_file
                 )
 
-            feedback = vision_refine_diagram(
-                diagram_type="sequence_diagram",
-                puml_path=output_file,
-                generate_fn=_gen,
-                analyze_fn=analyze_diagram,
-                regenerate_fn=_regen,
-                compile_after_regen=True
-            )
+                # 5️⃣ Recompile improved version
+                compile_plantuml(output_file)
 
-            print("\nVision Feedback (sequence):\n",
-                  feedback["choices"][0]["message"]["content"])
+                # 6️⃣ Save feedback memory
+                save_vision_feedback(
+                    BASE_DIR,
+                    diagram_type,
+                    selected_model.id,
+                    vision_text
+                )
 
-            generated_files.append(output_file)
+            else:
+                print("\nVision Feedback (sequence): Timeout o non disponibile.")
 
-        # ==============================
-        # SECURITY DIAGRAM
-        # ==============================
+        # ==========================================
+        # OTHER DIAGRAMS (Deterministic Generation)
+        # ==========================================
+        elif diagram_type == "component_diagram":
+            generate_component_diagram(selected_model, output_file)
+
+        elif diagram_type == "deployment_diagram":
+            generate_deployment_diagram(selected_model, output_file)
+
+        elif diagram_type == "context_diagram":
+            generate_context_diagram(selected_model, output_file)
+
         elif diagram_type == "security_diagram":
-
-            def _gen():
-                generate_security_diagram(selected_model, output_file)
-
-            feedback = vision_refine_diagram(
-                diagram_type="security_diagram",
-                puml_path=output_file,
-                generate_fn=_gen,
-                analyze_fn=analyze_diagram,
-                regenerate_fn=None,
-                compile_after_regen=False
-            )
-
-            print("\nVision Feedback (security):\n",
-                  feedback["choices"][0]["message"]["content"])
-
-            generated_files.append(output_file)
+            generate_security_diagram(selected_model, output_file)
 
         else:
             print(f"[INFO] Diagram type '{diagram_type}' not yet implemented.")
 
+        generated_files.append(output_file)
+
     # -----------------------------
-    # 7️⃣ Summary
+    # 6️⃣ Summary
     # -----------------------------
     print("\nGenerated artifacts:")
     for file in generated_files:

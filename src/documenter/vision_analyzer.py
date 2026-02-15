@@ -37,43 +37,44 @@ def encode_image(image_path: str) -> str:
     with open(image_path, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")
 
-def analyze_diagram(image_path: str, diagram_type: str, model: str = DEFAULT_MODEL, timeout: int = 120) -> Dict:
+def analyze_diagram(image_path, diagram_type="generic"):
     image_base64 = encode_image(image_path)
 
-    prompt = PROMPTS.get(
-        diagram_type,
-        "Analyze this UML diagram image. Identify layout problems, duplicated elements, alignment issues, and visual inconsistencies. "
-        "Return concrete fixes that can be applied in PlantUML."
-    )
+    prompt_map = {
+        "sequence": "Analyze this UML SEQUENCE diagram. Focus on participant alignment, arrow direction, lifelines, spacing and readability.",
+        "context": "Analyze this UML CONTEXT diagram. Focus on system boundary clarity, actor placement and external interactions.",
+        "component": "Analyze this UML COMPONENT diagram. Focus on layout symmetry, dependency clarity and grouping.",
+        "deployment": "Analyze this UML DEPLOYMENT diagram. Focus on node separation, containment clarity and infrastructure readability.",
+        "security": "Analyze this UML SECURITY diagram. Focus on trust boundaries, actor placement and security annotations."
+    }
+
+    prompt = prompt_map.get(diagram_type, "Analyze this UML diagram.")
 
     payload = {
-        "model": model,
+        "model": "minicpm-v-2_6",
         "messages": [
             {
                 "role": "user",
                 "content": [
                     {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_base64}"}},
-                ],
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/png;base64,{image_base64}"
+                        }
+                    }
+                ]
             }
         ],
-        "temperature": 0.2,
+        "temperature": 0.2
     }
 
     try:
-        response = requests.post(LM_API_URL, json=payload, timeout=timeout)
-        response.raise_for_status()
+        response = requests.post(LM_API_URL, json=payload, timeout=40)
         return response.json()
-    except requests.exceptions.Timeout:
-        # fallback “soft” output così non crasha tutto
+
+    except Exception as e:
         return {
-            "choices": [
-                {"message": {"content": "[VISION TIMEOUT] Nessun feedback disponibile (timeout)."}}
-            ]
-        }
-    except requests.exceptions.RequestException as e:
-        return {
-            "choices": [
-                {"message": {"content": f"[VISION ERROR] {e}"}}
-            ]
+            "error": "timeout_or_connection_error",
+            "message": str(e)
         }

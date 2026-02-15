@@ -263,6 +263,11 @@ def vision_refine_diagram(
 
     # 3) analyze
     feedback = analyze_fn(str(png_path), diagram_type=diagram_type)
+
+    # 🔒 Controllo sicurezza
+    if not isinstance(feedback, dict) or "choices" not in feedback:
+        return feedback  # ritorna direttamente (timeout o errore)
+
     vision_text = feedback["choices"][0]["message"]["content"]
 
     # 4) regenerate (se disponibile)
