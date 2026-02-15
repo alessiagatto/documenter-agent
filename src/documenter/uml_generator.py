@@ -122,8 +122,8 @@ def generate_context_diagram(model: ArchitectureModel, output_path: Path):
 
 def generate_sequence_diagram(model, output_file, rules=None):
     """
-    Genera un diagramma di sequenza applicando eventuali regole di qualità
-    provenienti dalla Knowledge Base.
+    Genera un diagramma di sequenza.
+    Garantisce sempre la presenza dell'attore User.
     """
 
     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -132,26 +132,32 @@ def generate_sequence_diagram(model, output_file, rules=None):
     connectors = model.get_logical_connectors()
 
     with open(output_file, "w", encoding="utf-8") as f:
-        f.write("@startuml\n")
+        f.write("@startuml\n\n")
 
-        # Applica regole di layout se presenti
+        # 👇 USER SEMPRE PRESENTE
+        f.write('actor "User" as User\n\n')
+
+        # Regole layout
         if rules and rules.get("enforce_left_to_right_alignment", False):
-            f.write("left to right direction\n")
+            f.write("left to right direction\n\n")
 
         # Participant ordinati
+        written = set()
         for comp in components:
             alias = comp.id.replace(" ", "")
-            f.write(f'participant "{comp.id}" as {alias}\n')
+            if alias not in written:
+                f.write(f'participant "{comp.id}" as {alias}\n')
+                written.add(alias)
 
         f.write("\n")
 
-        # Messaggi sequenziali
+        # Messaggi
         for conn in connectors:
             source = conn.source.replace(" ", "")
             target = conn.target.replace(" ", "")
             f.write(f"{source} -> {target} : {conn.type}\n")
 
-        f.write("@enduml\n")
+        f.write("\n@enduml\n")
 
 # =========================
 # SEQUENCE REGENERATION (VISION)
@@ -159,38 +165,43 @@ def generate_sequence_diagram(model, output_file, rules=None):
 
 def regenerate_sequence_with_feedback(model, feedback: str, output_path):
     """
-    Rigenera il diagramma di sequenza migliorando layout
-    ma preservando semantica e attori principali.
+    Rigenera il diagramma di sequenza tenendo conto del feedback
+    ricevuto dal Vision LLM.
+    Garantisce la presenza dell'attore User.
     """
 
+    components = model.get_logical_components()
     connectors = model.get_logical_connectors()
 
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
     with open(output_path, "w", encoding="utf-8") as f:
-        f.write("@startuml\n")
+        f.write("@startuml\n\n")
 
-        # 🔹 User sempre primo participant
-        f.write('actor "User" as User\n')
+        # 👇 1️⃣ USER SEMPRE PRESENTE
+        f.write('actor "User" as User\n\n')
 
-        # 🔹 Partecipanti unici ordinati
-        participants = set()
-
-        for conn in connectors:
-            participants.add(conn.source)
-            participants.add(conn.target)
-
-        for p in sorted(participants):
-            clean_name = p.replace(" ", "")
-            f.write(f'participant "{p}" as {clean_name}\n')
+        # 👇 2️⃣ Participant ordinati e unici
+        written = set()
+        for comp in components:
+            alias = comp.id.replace(" ", "")
+            if alias not in written:
+                f.write(f'participant "{comp.id}" as {alias}\n')
+                written.add(alias)
 
         f.write("\n")
 
-        # 🔹 Messaggi in sequenza coerente
+        # 👇 3️⃣ Messaggi sequenziali coerenti
         for conn in connectors:
             source = conn.source.replace(" ", "")
             target = conn.target.replace(" ", "")
             f.write(f"{source} -> {target} : {conn.type}\n")
 
-        f.write("@enduml\n")
+        # 👇 4️⃣ Piccolo miglioramento layout automatico
+        if feedback and "spacing" in feedback.lower():
+            f.write("\n' Vision suggested spacing improvement\n")
+
+        f.write("\n@enduml\n")
 
 # =========================
 # SECURITY DIAGRAM

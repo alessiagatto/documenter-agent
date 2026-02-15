@@ -1,4 +1,7 @@
 @startuml
+
+actor "User" as User
+
 participant "Catalog Service" as CatalogService
 participant "Cart Service" as CartService
 participant "Order Service" as OrderService
@@ -10,4 +13,5 @@ CatalogService -> UserService : space read/write
 CartService -> UserService : space read/write
 OrderService -> PaymentService : space read/write
 OrderService -> ShippingService : space read/write
+
 @enduml
