@@ -109,35 +109,38 @@ def generate_context_diagram(model: ArchitectureModel, output_path: Path):
 # SEQUENCE DIAGRAM
 # =========================
 
-def generate_sequence_diagram(model: ArchitectureModel, output_path: Path):
+def generate_sequence_diagram(model, output_file, rules=None):
+    """
+    Genera un diagramma di sequenza applicando eventuali regole di qualità
+    provenienti dalla Knowledge Base.
+    """
+
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+
+    components = model.get_logical_components()
     connectors = model.get_logical_connectors()
 
-    lines = []
-    lines.append("@startuml")
-    lines.append("actor User")
+    with open(output_file, "w", encoding="utf-8") as f:
+        f.write("@startuml\n")
 
-    participants = set()
+        # Applica regole di layout se presenti
+        if rules and rules.get("enforce_left_to_right_alignment", False):
+            f.write("left to right direction\n")
 
-    for conn in connectors:
-        participants.add(conn.source)
-        participants.add(conn.target)
+        # Participant ordinati
+        for comp in components:
+            alias = comp.id.replace(" ", "")
+            f.write(f'participant "{comp.id}" as {alias}\n')
 
-    for p in participants:
-        safe = p.replace(" ", "")
-        lines.append(f'participant "{p}" as {safe}')
+        f.write("\n")
 
-    lines.append("")
+        # Messaggi sequenziali
+        for conn in connectors:
+            source = conn.source.replace(" ", "")
+            target = conn.target.replace(" ", "")
+            f.write(f"{source} -> {target} : {conn.type}\n")
 
-    for conn in connectors:
-        source = conn.source.replace(" ", "")
-        target = conn.target.replace(" ", "")
-        lines.append(f"{source} -> {target} : {conn.type}")
-
-    lines.append("@enduml")
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text("\n".join(lines), encoding="utf-8")
-
+        f.write("@enduml\n")
 
 # =========================
 # SEQUENCE REGENERATION (VISION)

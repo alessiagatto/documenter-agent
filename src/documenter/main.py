@@ -5,7 +5,8 @@ from src.documenter.uml_generator import (
     generate_context_diagram,
     generate_deployment_diagram,
     generate_component_diagram,
-    regenerate_sequence_with_feedback
+    regenerate_sequence_with_feedback,
+    compile_plantuml
 )
 from src.documenter.lm_integration import generate_description
 from src.documenter.document_builder import build_document_bundle
@@ -45,7 +46,9 @@ if __name__ == "__main__":
 
     BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-    # Load Knowledge Base
+    # -----------------------------
+    # 1️⃣ Load Knowledge Base
+    # -----------------------------
     kb_path = BASE_DIR / "data" / "kb" / "documentation_rules.json"
     kb = load_knowledge_base(kb_path)
 
@@ -54,7 +57,9 @@ if __name__ == "__main__":
     for view, diagram in kb.view_to_diagram_mapping.items():
         print(f"- {view} -> {diagram}")
 
-    # Load architecture JSON
+    # -----------------------------
+    # 2️⃣ Load Architecture
+    # -----------------------------
     input_path = BASE_DIR / "data" / "input" / "finalArchitecture.json"
     architecture_data = load_architecture(input_path)
 
@@ -69,14 +74,18 @@ if __name__ == "__main__":
 
     print(f"\nSelected architecture: {selected_model.id}")
 
-    # Documentation planning
+    # -----------------------------
+    # 3️⃣ Documentation Plan
+    # -----------------------------
     plan = create_documentation_plan(selected_model)
 
     print("\nDocumentation Plan:")
     for view in plan.views:
         print(f"- {view}")
 
-    # Layout check
+    # -----------------------------
+    # 4️⃣ Layout Check
+    # -----------------------------
     max_components = kb.layout_rules.get("max_components_per_view", 10)
     components = selected_model.get_logical_components()
 
@@ -85,47 +94,60 @@ if __name__ == "__main__":
     else:
         print("\nLayout check passed.")
 
+    # -----------------------------
+    # 5️⃣ Diagram Quality Rules
+    # -----------------------------
+    diagram_quality_rules = getattr(kb, "diagram_quality_rules", {})
+
     generated_files = []
 
-    # Generate diagrams
+    # -----------------------------
+    # 6️⃣ Generate Diagrams
+    # -----------------------------
     for view in plan.views:
+
         diagram_type = kb.view_to_diagram_mapping.get(view)
 
         print(f"\n[DEBUG] View: {view}")
         print(f"[DEBUG] Diagram type from KB: {diagram_type}")
 
+        output_file = BASE_DIR / "docs" / "generated" / "diagrams" / f"{diagram_type}.puml"
+
+        # -------- COMPONENT --------
         if diagram_type == "component_diagram":
-            output_file = BASE_DIR / "docs" / "generated"/"diagrams" / f"{diagram_type}.puml"
             generate_component_diagram(selected_model, output_file)
             generated_files.append(output_file)
 
+        # -------- DEPLOYMENT --------
         elif diagram_type == "deployment_diagram":
-            output_file = BASE_DIR / "docs" / "generated"/"diagrams" / f"{diagram_type}.puml"
             generate_deployment_diagram(selected_model, output_file)
             generated_files.append(output_file)
 
+        # -------- CONTEXT --------
         elif diagram_type == "context_diagram":
-            output_file = BASE_DIR / "docs" / "generated"/"diagrams" / f"{diagram_type}.puml"
             generate_context_diagram(selected_model, output_file)
             generated_files.append(output_file)
 
+        # -------- SEQUENCE (SELF-EVOLVING) --------
         elif diagram_type == "sequence_diagram":
 
-            output_file = BASE_DIR / "docs" / "generated"/"diagrams" / f"{diagram_type}.puml"
+            sequence_rules = diagram_quality_rules.get("sequence_diagram", {})
 
-            # 1️⃣ Generate initial diagram
-            generate_sequence_diagram(selected_model, output_file)
+            # 1️⃣ Generate initial diagram using KB rules
+            generate_sequence_diagram(
+                selected_model,
+                output_file,
+                rules=sequence_rules
+            )
 
-            # 2️⃣ Compile to PNG (assicurati di avere questa funzione)
-            from src.documenter.uml_generator import compile_plantuml
+            # 2️⃣ Compile PNG
             compile_plantuml(output_file)
-
             png_path = output_file.with_suffix(".png")
 
-            # 3️⃣ Analyze with Vision LLM
+            # 3️⃣ Vision Analysis
             feedback = analyze_diagram(str(png_path))
-
             vision_text = feedback["choices"][0]["message"]["content"]
+
             print("\nVision Feedback:\n", vision_text)
 
             # 4️⃣ Regenerate improved version
@@ -137,14 +159,17 @@ if __name__ == "__main__":
 
             generated_files.append(output_file)
 
+        # -------- SECURITY --------
         elif diagram_type == "security_diagram":
-            output_file = BASE_DIR / "docs" / "generated"/"diagrams" / f"{diagram_type}.puml"
             generate_security_diagram(selected_model, output_file)
             generated_files.append(output_file)
 
         else:
             print(f"[INFO] Diagram type '{diagram_type}' not yet implemented.")
 
+    # -----------------------------
+    # 7️⃣ Summary
+    # -----------------------------
     print("\nGenerated artifacts:")
     for file in generated_files:
         print(f"- {file}")
