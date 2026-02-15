@@ -224,3 +224,42 @@ def compile_plantuml(puml_path: Path):
         ["java", "-jar", str(plantuml_jar), str(puml_path)],
         check=True
     )
+
+from typing import Callable, Optional
+
+def vision_refine_diagram(
+    diagram_type: str,
+    puml_path: Path,
+    generate_fn: Callable[[], None],
+    analyze_fn: Callable[[str, str], dict],
+    regenerate_fn: Optional[Callable[[str], None]] = None,
+    compile_after_regen: bool = True,
+) -> dict:
+    """
+    Loop:
+    1) generate_fn() produce puml_path
+    2) compile -> png
+    3) analyze_fn(png_path, diagram_type) -> feedback json
+    4) regenerate_fn(vision_text) aggiorna il .puml (opzionale)
+    5) ricompila -> png (opzionale)
+    """
+    # 1) generate
+    generate_fn()
+
+    # 2) compile
+    compile_plantuml(puml_path)
+    png_path = puml_path.with_suffix(".png")
+
+    # 3) analyze
+    feedback = analyze_fn(str(png_path), diagram_type=diagram_type)
+    vision_text = feedback["choices"][0]["message"]["content"]
+
+    # 4) regenerate (se disponibile)
+    if regenerate_fn is not None:
+        regenerate_fn(vision_text)
+
+        # 5) compile again
+        if compile_after_regen:
+            compile_plantuml(puml_path)
+
+    return feedback

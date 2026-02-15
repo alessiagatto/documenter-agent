@@ -1,70 +1,79 @@
 import requests
 import base64
+from typing import Dict
 
 LM_API_URL = "http://127.0.0.1:1234/v1/chat/completions"
-VISION_MODEL = "minicpm-v-2_6"
+DEFAULT_MODEL = "minicpm-v-2_6"
 
+PROMPTS = {
+    "sequence_diagram": (
+        "Analyze this UML SEQUENCE diagram image. "
+        "Check: missing/duplicated lifelines, message ordering, arrow direction, readability, spacing, and alignment. "
+        "Return concrete fixes that can be applied in PlantUML (e.g., add actor User, reorder participants, avoid overlaps)."
+    ),
+    "component_diagram": (
+        "Analyze this UML COMPONENT diagram image. "
+        "Check: duplicated components, unclear dependencies, crossing lines, label overlap, inconsistent connector styles, layout readability. "
+        "Return concrete PlantUML-oriented fixes (grouping, direction hints, simplification)."
+    ),
+    "deployment_diagram": (
+        "Analyze this UML DEPLOYMENT diagram image. "
+        "Check: node grouping, component-to-node mapping readability, overlaps, line crossings, label legibility. "
+        "Return concrete PlantUML fixes (group nodes, rearrange, simplify connectors)."
+    ),
+    "context_diagram": (
+        "Analyze this SYSTEM CONTEXT diagram image. "
+        "Check: actors/external systems clarity, missing system boundary, overlaps, label readability, line crossings. "
+        "Return concrete PlantUML fixes (system boundary, actor placement, simplified relations)."
+    ),
+    "security_diagram": (
+        "Analyze this SECURITY diagram image (trust boundaries, threats, countermeasures). "
+        "Check: clarity of boundaries, readability, overlaps, line crossings, consistent notation. "
+        "Return concrete PlantUML fixes (grouping, boundary boxes, clearer labeling)."
+    ),
+}
 
 def encode_image(image_path: str) -> str:
     with open(image_path, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")
 
-
-def analyze_diagram(image_path: str, diagram_type: str = "uml") -> dict:
-    """
-    Analizza un diagramma UML (immagine) con un Vision LLM.
-    diagram_type: "sequence" | "component" | "deployment" | "context" | "security" | "uml"
-    """
+def analyze_diagram(image_path: str, diagram_type: str, model: str = DEFAULT_MODEL, timeout: int = 120) -> Dict:
     image_base64 = encode_image(image_path)
-    dt = (diagram_type or "uml").strip().lower()
 
-    # Prompt vincolato: niente Mermaid, niente cambio tipo diagramma, solo feedback grafico/layout.
-    text_prompt = f"""
-You are a UML diagram reviewer.
-
-Diagram type: {dt.upper()}.
-
-Task:
-- Provide ONLY layout/visual feedback (readability, alignment, spacing, overlaps, duplicated elements, arrow clarity, label placement, consistency).
-- DO NOT change the diagram meaning/semantics.
-- DO NOT propose Mermaid or any other notation.
-- DO NOT rewrite the full diagram.
-- DO NOT switch to a different UML diagram type.
-
-Output format:
-- Bullet list of concrete, actionable suggestions.
-- If you detect duplicates, name them explicitly.
-- If you suggest alignment changes, be specific (e.g., "order participants left-to-right: ...", "increase spacing between ...").
-""".strip()
+    prompt = PROMPTS.get(
+        diagram_type,
+        "Analyze this UML diagram image. Identify layout problems, duplicated elements, alignment issues, and visual inconsistencies. "
+        "Return concrete fixes that can be applied in PlantUML."
+    )
 
     payload = {
-        "model": VISION_MODEL,
+        "model": model,
         "messages": [
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": text_prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/png;base64,{image_base64}"},
-                    },
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_base64}"}},
                 ],
             }
         ],
         "temperature": 0.2,
     }
 
-    response = requests.post(LM_API_URL, json=payload, timeout=180)
     try:
-        response = requests.post(LM_API_URL, json=payload, timeout=180)
+        response = requests.post(LM_API_URL, json=payload, timeout=timeout)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.Timeout:
-        print("[WARNING] Vision model timeout. Using original diagram.")
-        return {"choices": [{"message": {"content": ""}}]}
-    except Exception as e:
-        print(f"[WARNING] Vision error: {e}")
-        return {"choices": [{"message": {"content": ""}}]}
-
-    response.raise_for_status()
-    return response.json()
+        # fallback “soft” output così non crasha tutto
+        return {
+            "choices": [
+                {"message": {"content": "[VISION TIMEOUT] Nessun feedback disponibile (timeout)."}}
+            ]
+        }
+    except requests.exceptions.RequestException as e:
+        return {
+            "choices": [
+                {"message": {"content": f"[VISION ERROR] {e}"}}
+            ]
+        }
