@@ -1,15 +1,15 @@
 @startuml
+left to right direction
 skinparam rectangleStyle rounded
+skinparam shadowing false
 
-rectangle "Catalog Service" as CatalogService
-rectangle "Cart Service" as CartService
-rectangle "Order Service" as OrderService
-rectangle "User Service" as UserService
-rectangle "Payment Service" as PaymentService
-rectangle "Shipping Service" as ShippingService
+actor "User" as User
+rectangle "Payment Provider" as Payment
+rectangle "Shipping Provider" as Shipping
 
-CatalogService --> UserService
-CartService --> UserService
-OrderService --> PaymentService
-OrderService --> ShippingService
+rectangle "Microservices Architecture" as System #LightBlue
+
+User --> System : Uses platform
+System --> Payment : Processes payments
+System --> Shipping : Handles shipments
 @enduml

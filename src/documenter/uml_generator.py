@@ -80,30 +80,41 @@ def generate_deployment_diagram(model: ArchitectureModel, output_path: Path):
 # =========================
 
 def generate_context_diagram(model: ArchitectureModel, output_path: Path):
-    components = model.get_logical_components()
-    connectors = model.get_logical_connectors()
+    """
+    Genera un diagramma di contesto (C4 - Level 1).
+    Mostra il sistema come black-box e gli attori esterni.
+    """
+
+    system_name = model.id
 
     lines = []
     lines.append("@startuml")
+    lines.append("left to right direction")
     lines.append("skinparam rectangleStyle rounded")
+    lines.append("skinparam shadowing false")
     lines.append("")
 
-    for comp in components:
-        safe = comp.id.replace(" ", "")
-        lines.append(f'rectangle "{comp.id}" as {safe}')
-
+    # Attori esterni
+    lines.append('actor "User" as User')
+    lines.append('rectangle "Payment Provider" as Payment')
+    lines.append('rectangle "Shipping Provider" as Shipping')
     lines.append("")
 
-    for conn in connectors:
-        source = conn.source.replace(" ", "")
-        target = conn.target.replace(" ", "")
-        lines.append(f"{source} --> {target}")
+    # Sistema come black-box
+    lines.append(f'rectangle "{system_name}" as System #LightBlue')
+    lines.append("")
+
+    # Relazioni
+    lines.append("User --> System : Uses platform")
+    lines.append("System --> Payment : Processes payments")
+    lines.append("System --> Shipping : Handles shipments")
 
     lines.append("@enduml")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text("\n".join(lines), encoding="utf-8")
 
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
 
 # =========================
 # SEQUENCE DIAGRAM
