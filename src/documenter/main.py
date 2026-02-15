@@ -144,8 +144,8 @@ if __name__ == "__main__":
             compile_plantuml(output_file)
             png_path = output_file.with_suffix(".png")
 
-            # 3️⃣ Vision Analysis
-            feedback = analyze_diagram(str(png_path))
+            # 3️⃣ Vision Analysis (type-aware)
+            feedback = analyze_diagram(str(png_path), diagram_type="sequence")
             vision_text = feedback["choices"][0]["message"]["content"]
 
             print("\nVision Feedback:\n", vision_text)
@@ -156,7 +156,8 @@ if __name__ == "__main__":
                 vision_text,
                 output_file
             )
-
+            # 5️⃣ Ricompila PNG aggiornato
+            compile_plantuml(output_file)
             generated_files.append(output_file)
 
         # -------- SECURITY --------

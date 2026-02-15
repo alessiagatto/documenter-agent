@@ -146,40 +146,40 @@ def generate_sequence_diagram(model, output_file, rules=None):
 # SEQUENCE REGENERATION (VISION)
 # =========================
 
-def regenerate_sequence_with_feedback(model, feedback: str, output_path: Path):
+def regenerate_sequence_with_feedback(model, feedback: str, output_path):
+    """
+    Rigenera il diagramma di sequenza migliorando layout
+    ma preservando semantica e attori principali.
+    """
+
     connectors = model.get_logical_connectors()
 
-    lines = []
-    lines.append("@startuml")
-    lines.append("actor User")
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("@startuml\n")
 
-    participants = set()
+        # 🔹 User sempre primo participant
+        f.write('actor "User" as User\n')
 
-    for conn in connectors:
-        participants.add(conn.source)
-        participants.add(conn.target)
+        # 🔹 Partecipanti unici ordinati
+        participants = set()
 
-    for p in sorted(participants):
-        safe = p.replace(" ", "")
-        lines.append(f'participant "{p}" as {safe}')
+        for conn in connectors:
+            participants.add(conn.source)
+            participants.add(conn.target)
 
-    lines.append("")
+        for p in sorted(participants):
+            clean_name = p.replace(" ", "")
+            f.write(f'participant "{p}" as {clean_name}\n')
 
-    for conn in connectors:
-        source = conn.source.replace(" ", "")
-        target = conn.target.replace(" ", "")
-        lines.append(f"{source} -> {target} : {conn.type}")
+        f.write("\n")
 
-    if "alignment" in feedback.lower():
-        lines.append("\n' Alignment improvements applied")
+        # 🔹 Messaggi in sequenza coerente
+        for conn in connectors:
+            source = conn.source.replace(" ", "")
+            target = conn.target.replace(" ", "")
+            f.write(f"{source} -> {target} : {conn.type}\n")
 
-    if "duplicate" in feedback.lower():
-        lines.append("' Duplicate check applied")
-
-    lines.append("@enduml")
-
-    output_path.write_text("\n".join(lines), encoding="utf-8")
-
+        f.write("@enduml\n")
 
 # =========================
 # SECURITY DIAGRAM

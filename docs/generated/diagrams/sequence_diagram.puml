@@ -1,5 +1,5 @@
 @startuml
-actor User
+actor "User" as User
 participant "Cart Service" as CartService
 participant "Catalog Service" as CatalogService
 participant "Order Service" as OrderService
@@ -11,7 +11,4 @@ CatalogService -> UserService : space read/write
 CartService -> UserService : space read/write
 OrderService -> PaymentService : space read/write
 OrderService -> ShippingService : space read/write
-
-' Alignment improvements applied
-' Duplicate check applied
 @enduml
