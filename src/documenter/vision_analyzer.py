@@ -70,7 +70,7 @@ def analyze_diagram(image_path, diagram_type="generic"):
     }
 
     try:
-        response = requests.post(LM_API_URL, json=payload, timeout=40)
+        response = requests.post(LM_API_URL, json=payload, timeout=120)
         return response.json()
 
     except Exception as e:
