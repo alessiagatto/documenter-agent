@@ -4,37 +4,66 @@
 
 ## 1. Introduzione
 
-La presente documentazione descrive in modo completo l’architettura di un sistema progettato per operare in un contesto ad alta variabilità di carico, con requisiti stringenti in termini di scalabilità, sicurezza, affidabilità e manutenibilità.
+La presente documentazione descrive in modo completo l’architettura **Microservices Architecture**, progettata per operare in un contesto ad alta variabilità di carico, con requisiti stringenti in termini di scalabilità, sicurezza, affidabilità e manutenibilità.
 
-L’obiettivo è fornire una descrizione architetturale strutturata conforme ai principi IEEE 1016.
+L’obiettivo è fornire una descrizione architetturale strutturata conforme ai principi IEEE 1016, includendo requisiti, driver architetturali, alternative considerate, trade-off e rappresentazioni UML.
+
 
 ---
 
 ## 2. Contesto e Problema
 
-Il sistema deve sostenere utenti concorrenti, transazioni sicure e integrazione con sistemi esterni garantendo scalabilità e resilienza.
+Il sistema deve sostenere utenti concorrenti, transazioni sicure e integrazione con sistemi esterni garantendo scalabilità, resilienza e disponibilità continua.
+
 
 ---
 
-## 3. Requisiti Funzionali
+## 3. Requisiti del Sistema
 
-- Gestione catalogo prodotti
-- Ricerca e filtraggio
-- Gestione carrello
-- Creazione ordini
-- Integrazione pagamenti
-- Integrazione spedizioni
-- Gestione account utente
+### 3.1 Requisiti Funzionali
+
+Il sistema deve supportare le seguenti funzionalità principali:
+
+- **Gestione del catalogo prodotti**: inserimento, aggiornamento e consultazione prodotti.
+
+- **Ricerca e navigazione prodotti**: filtri avanzati e ricerca per parole chiave.
+
+- **Gestione del carrello**: aggiunta, modifica e rimozione prodotti.
+
+- **Creazione e gestione ordini**: conferma acquisto e tracciamento stato.
+
+- **Integrazione con gateway di pagamento**: elaborazione sicura delle transazioni.
+
+- **Integrazione con servizi di spedizione**: gestione consegne e aggiornamenti.
+
+- **Gestione account utente**: autenticazione, autorizzazione e gestione profilo.
+
+
+### 3.2 Requisiti Non Funzionali
+
+**Performance**: tempo di risposta ridotto per operazioni critiche.
+
+**Scalabilità**: supporto a elevati volumi di utenti concorrenti.
+
+**Disponibilità**: elevato uptime tramite ridondanza.
+
+**Sicurezza**: cifratura dati e controlli di accesso.
+
+**Manutenibilità**: evoluzione con impatto minimo.
+
 
 ---
 
 ## 4. Trade-Off Architetturali
 
-Performance vs Complessità
+### Performance vs Complessità
+Un’architettura distribuita migliora la scalabilità ma aumenta la complessità operativa.
 
-Disponibilità vs Costi
+### Disponibilità vs Costi
+La ridondanza migliora l’affidabilità ma incrementa i costi infrastrutturali.
 
-Sicurezza vs Performance
+### Sicurezza vs Performance
+I controlli di sicurezza introducono overhead ma garantiscono protezione dei dati.
 
 
 ---
@@ -104,4 +133,4 @@ Il diagramma di sicurezza evidenzia i principali confini di fiducia (trust bound
 
 ## 10. Conclusioni
 
-L’architettura **Microservices Architecture** rappresenta una soluzione equilibrata tra scalabilità, sicurezza e manutenibilità, fornendo una base solida per evoluzione futura.
+L’architettura **Microservices Architecture** rappresenta una soluzione equilibrata tra scalabilità, sicurezza e manutenibilità, fornendo una base solida per evoluzione futura e deployment distribuito.
