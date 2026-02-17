@@ -1,33 +1,77 @@
 import requests
-import json
 
-LM_API_URL = "http://127.0.0.1:1234" 
+LM_API_URL = "http://127.0.0.1:1234"
 
 
-def generate_description(architecture_data: dict) -> str:
-    prompt = (
-        f"Generate a detailed technical architectural description for the following system.\n\n"
-        f"Architecture ID: {architecture_data['architecture_id']}\n"
-        f"Architecture Name: {architecture_data['architecture_name']}\n"
-        f"Documentation Views: {', '.join(architecture_data['views'])}\n\n"
-        f"Components:\n"
-        f"{', '.join(architecture_data['components'])}\n\n"
-        f"Relationships between components:\n"
-        f"{', '.join([f'{r['source']} -> {r['target']}' for r in architecture_data['relationships']])}\n\n"
-        f"Please describe the system's structure, components, and interactions clearly and concisely."
-    )
+def generate_diagram_description(model, view: str) -> str:
+    """
+    Descrizione robusta:
+    - Non dipende dall'LLM per forza
+    - Usa info del modello (components/connectors)
+    - Sempre in italiano
+    """
 
-    payload = {
-        "model": "phi-2-layla-v1-chatml",  # Sostituisci con il modello corretto se necessario
-        "prompt": prompt,
-        "temperature": 0.7
-    }
+    # componenti e connessioni
+    try:
+        comps = model.get_logical_components()
+    except Exception:
+        comps = []
 
-    # Usa l'endpoint '/v1/completions'
-    response = requests.post(f"{LM_API_URL}/v1/completions", json=payload)
+    try:
+        conns = model.get_logical_connectors()
+    except Exception:
+        conns = []
 
-    if response.status_code == 200:
-        return response.json().get("choices", [{}])[0].get("text", "").strip()
-    else:
-        print(f"Error: {response.status_code}")
-        return "No description generated."
+    comp_names = []
+    for c in comps:
+        # nel tuo modello i componenti sembrano oggetti con .id
+        name = getattr(c, "id", str(c))
+        comp_names.append(name)
+
+    conn_lines = []
+    for conn in conns[:12]:  # limita per non fare un poema
+        s = getattr(conn, "source", "")
+        t = getattr(conn, "target", "")
+        typ = getattr(conn, "type", "interazione")
+        if s and t:
+            conn_lines.append(f"- {s} → {t} ({typ})")
+
+    if view == "context_view":
+        return (
+            "Il diagramma del contesto rappresenta il sistema come **black-box** e mostra gli attori/sistemi esterni "
+            "con cui interagisce. È utile per chiarire **confini**, **responsabilità** e integrazioni con provider esterni "
+            "(es. pagamenti e spedizioni)."
+        )
+
+    if view == "logical_view":
+        testo = (
+            "Il diagramma dei componenti mostra la scomposizione logica del sistema in servizi/moduli. "
+            "Nel caso corrente sono presenti i seguenti elementi principali:\n\n"
+            + "\n".join([f"- {n}" for n in comp_names]) +
+            "\n\nLe dipendenze principali (parziali) sono:\n"
+            + ("\n".join(conn_lines) if conn_lines else "- (dipendenze non disponibili)")
+        )
+        return testo
+
+    if view == "deployment_view":
+        return (
+            "Il diagramma di deployment rappresenta la distribuzione fisica dei componenti su nodi infrastrutturali "
+            "(es. web/app/database). Serve a evidenziare **separazione dei livelli**, scalabilità e isolamento dei failure. "
+            "È utile anche per discutere aspetti di rete, bilanciamento e fault tolerance."
+        )
+
+    if view == "runtime_view":
+        return (
+            "Il diagramma di sequenza descrive il comportamento dinamico del sistema, evidenziando l’ordine temporale "
+            "delle interazioni tra attore e servizi. In un contesto e-commerce tipicamente include: consultazione catalogo, "
+            "gestione carrello, creazione ordine, pagamento e avvio spedizione."
+        )
+
+    if view == "security_view":
+        return (
+            "Il diagramma di sicurezza evidenzia i principali confini di fiducia (trust boundaries) e le misure di protezione: "
+            "TLS in transito, autenticazione/autorizzazione, validazione input, logging e auditing. "
+            "È utile per ragionare su threat model e punti critici (pagamenti, dati utenti)."
+        )
+
+    return "Descrizione non disponibile per questa vista."

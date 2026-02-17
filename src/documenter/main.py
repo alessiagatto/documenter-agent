@@ -1,7 +1,10 @@
-from src.documenter.kb_updater import update_kb_from_feedback
-from src.documenter.vision_rule_extractor import extract_rules_from_feedback
-from src.documenter.vision_memory import save_vision_feedback
-from src.documenter.vision_analyzer import analyze_diagram
+from pathlib import Path
+import json
+
+from src.documenter.kb_loader import load_knowledge_base
+from src.documenter.planner import create_documentation_plan
+from src.documenter.models import ArchitectureModel
+
 from src.documenter.uml_generator import (
     generate_security_diagram,
     generate_sequence_diagram,
@@ -9,51 +12,51 @@ from src.documenter.uml_generator import (
     generate_deployment_diagram,
     generate_component_diagram,
     regenerate_sequence_with_feedback,
-    compile_plantuml
+    compile_plantuml,
 )
-from src.documenter.kb_loader import load_knowledge_base
-from src.documenter.planner import create_documentation_plan
-from src.documenter.models import ArchitectureModel
 
-import json
-from pathlib import Path
+from src.documenter.vision_analyzer import analyze_diagram
+from src.documenter.vision_memory import save_vision_feedback
+from src.documenter.document_builder import build_document_bundle
 
 
-def load_architecture(path: str) -> dict:
-    file_path = Path(path)
-
-    if not file_path.exists():
+def load_architecture(path: Path) -> dict:
+    if not path.exists():
         raise FileNotFoundError(f"File not found: {path}")
-
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
 def select_architecture(data: dict, architecture_id: str) -> dict:
     for arch in data.get("architectural_views", []):
-        if arch["architecture_id"] == architecture_id:
+        if arch.get("architecture_id") == architecture_id:
             return arch
     raise ValueError(f"Architecture '{architecture_id}' not found.")
+
+
+def safe_compile(puml_path: Path) -> bool:
+    """Compila .puml -> .png. Ritorna True se esiste il PNG."""
+    try:
+        compile_plantuml(puml_path)
+        return puml_path.with_suffix(".png").exists()
+    except Exception as e:
+        print(f"[WARNING] Compile failed for {puml_path.name}: {e}")
+        return False
 
 
 if __name__ == "__main__":
 
     BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-    # =============================
-    # 1️⃣ Load Knowledge Base
-    # =============================
+    # 1) KB
     kb_path = BASE_DIR / "data" / "kb" / "documentation_rules.json"
     kb = load_knowledge_base(kb_path)
 
     print("\nKnowledge Base loaded.")
-    print("View to diagram mapping:")
     for view, diagram in kb.view_to_diagram_mapping.items():
         print(f"- {view} -> {diagram}")
 
-    # =============================
-    # 2️⃣ Load Architecture
-    # =============================
+    # 2) Architecture
     input_path = BASE_DIR / "data" / "input" / "finalArchitecture.json"
     architecture_data = load_architecture(input_path)
 
@@ -63,135 +66,81 @@ if __name__ == "__main__":
 
     print(f"\nSelected architecture: {selected_model.id}")
 
-    # =============================
-    # 3️⃣ Documentation Plan
-    # =============================
+    # 3) Plan
     plan = create_documentation_plan(selected_model)
-
     print("\nDocumentation Plan:")
     for view in plan.views:
         print(f"- {view}")
 
-    # =============================
-    # 4️⃣ Layout Check
-    # =============================
+    # 4) Layout check
     max_components = kb.layout_rules.get("max_components_per_view", 10)
     components = selected_model.get_logical_components()
-
     if len(components) > max_components:
         print("\n[LAYOUT WARNING] Logical view exceeds max components per view.")
     else:
         print("\nLayout check passed.")
 
+    # Output dirs
+    diagrams_dir = BASE_DIR / "docs" / "generated" / "diagrams"
+    diagrams_dir.mkdir(parents=True, exist_ok=True)
+
     generated_files = []
 
-    # =============================
-    # 5️⃣ Generate Diagrams
-    # =============================
+    # 5) Generate diagrams (+ compile PNG SEMPRE)
     for view in plan.views:
-
         diagram_type = kb.view_to_diagram_mapping.get(view)
-
         print(f"\n[DEBUG] View: {view}")
         print(f"[DEBUG] Diagram type from KB: {diagram_type}")
 
-        output_file = BASE_DIR / "docs" / "generated" / "diagrams" / f"{diagram_type}.puml"
+        puml_path = diagrams_dir / f"{diagram_type}.puml"
 
-        # ==========================================
-        # SEQUENCE DIAGRAM (Self-Evolving)
-        # ==========================================
-        if diagram_type == "sequence_diagram":
-
-            # 1️⃣ Generate base version
-            generate_sequence_diagram(selected_model, output_file)
-
-            # 2️⃣ Compile PNG
-            compile_plantuml(output_file)
-            png_path = output_file.with_suffix(".png")
-
-            # 3️⃣ Analyze with Vision
-            feedback = analyze_diagram(str(png_path), diagram_type="sequence")
-
-            if isinstance(feedback, dict) and "choices" in feedback:
-
-                vision_text = feedback["choices"][0]["message"]["content"]
-                print("\nVision Feedback (sequence):\n", vision_text)
-
-                # 4️⃣ Extract structured rules (LLM)
-                new_rules = extract_rules_from_feedback(
-                    diagram_type,
-                    vision_text
-                )
-
-                # 5️⃣ Update KB dynamically
-                if new_rules:
-                    update_kb_from_feedback(
-                        kb_path,
-                        diagram_type,
-                        new_rules
-                    )
-                    print(f"[KB UPDATE] Nuove regole salvate: {new_rules}")
-
-                # 6️⃣ Regenerate improved version
-                regenerate_sequence_with_feedback(
-                    selected_model,
-                    vision_text,
-                    output_file
-                )
-
-                # 7️⃣ Recompile improved version
-                compile_plantuml(output_file)
-
-                # 8️⃣ Save memory
-                save_vision_feedback(
-                    BASE_DIR,
-                    diagram_type,
-                    selected_model.id,
-                    vision_text
-                )
-
-            else:
-                print("\n[VISION FALLBACK] Timeout o non disponibile. Attivazione rule-based fallback.")
-
-                # Fallback simulato minimale
-                simulated_feedback = "Enforce left to right order and avoid duplicates."
-
-                new_rules = extract_rules_from_feedback(
-                    diagram_type,
-                    simulated_feedback
-                )
-
-                if new_rules:
-                    update_kb_from_feedback(
-                        kb_path,
-                        diagram_type,
-                        new_rules
-                    )
-                    print(f"[KB UPDATE - FALLBACK] Nuove regole salvate: {new_rules}")
-
-        # ==========================================
-        # OTHER DIAGRAMS (Deterministic)
-        # ==========================================
-        elif diagram_type == "component_diagram":
-            generate_component_diagram(selected_model, output_file)
+        if diagram_type == "component_diagram":
+            generate_component_diagram(selected_model, puml_path)
+            safe_compile(puml_path)
 
         elif diagram_type == "deployment_diagram":
-            generate_deployment_diagram(selected_model, output_file)
+            generate_deployment_diagram(selected_model, puml_path)
+            safe_compile(puml_path)
 
         elif diagram_type == "context_diagram":
-            generate_context_diagram(selected_model, output_file)
+            generate_context_diagram(selected_model, puml_path)
+            safe_compile(puml_path)
 
         elif diagram_type == "security_diagram":
-            generate_security_diagram(selected_model, output_file)
+            generate_security_diagram(selected_model, puml_path)
+            safe_compile(puml_path)
+
+        elif diagram_type == "sequence_diagram":
+            # Base
+            generate_sequence_diagram(selected_model, puml_path)
+            png_ok = safe_compile(puml_path)
+
+            # Vision (se png ok)
+            if png_ok:
+                png_path = puml_path.with_suffix(".png")
+                feedback = analyze_diagram(str(png_path), diagram_type="sequence")
+
+                if isinstance(feedback, dict) and "choices" in feedback:
+                    vision_text = feedback["choices"][0]["message"]["content"]
+                    print("\nVision Feedback (sequence):\n", vision_text)
+
+                    regenerate_sequence_with_feedback(selected_model, vision_text, puml_path)
+                    safe_compile(puml_path)
+
+                    save_vision_feedback(BASE_DIR, diagram_type, selected_model.id, vision_text)
+                else:
+                    print("\n[VISION] Timeout o non disponibile (ok: fallback deterministico).")
+            else:
+                print("\n[SEQUENCE] PNG non generato, salto analisi Vision.")
 
         else:
             print(f"[INFO] Diagram type '{diagram_type}' not implemented.")
 
-        generated_files.append(output_file)
+        generated_files.append(puml_path)
 
-    # =============================
-    # 6️⃣ Summary
-    # =============================
+    # 6) Build doc (md+pdf) DOPO che i png sono pronti
+    build_document_bundle(BASE_DIR, plan, selected_model, kb)
+
     print("\nGenerated artifacts:")
-    for file in generated_files:
-        print(f"- {file}")
+    for f in generated_files:
+        print(f"- {f}")
