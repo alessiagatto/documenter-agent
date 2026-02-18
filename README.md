@@ -8,5 +8,3 @@ The Documenter Agent:
 - does not evaluate trade-offs
 - generates structured architectural documentation
   from a finalized architecture description (JSON input)
-
-The project is developed as part of a university internship.
