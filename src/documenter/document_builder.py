@@ -5,7 +5,7 @@ from src.documenter.lm_integration import generate_diagram_description
 from src.documenter.uml_generator import compile_plantuml
 
 
-def build_document_bundle(base_dir: Path, plan, model, kb):
+def build_document_bundle(base_dir: Path, plan, model, kb, full_input):
 
     docs_dir = base_dir / "docs" / "generated"
     diagrams_dir = docs_dir / "diagrams"
@@ -17,7 +17,7 @@ def build_document_bundle(base_dir: Path, plan, model, kb):
     output_pdf = docs_dir / "documentation.pdf"
 
     # ----------------------------------------------------------
-    # Se manca PNG prova a compilarlo dal PUML
+    # Ensure PNG exists
     # ----------------------------------------------------------
     def ensure_png(diagram_type: str) -> bool:
         puml = diagrams_dir / f"{diagram_type}.puml"
@@ -36,155 +36,248 @@ def build_document_bundle(base_dir: Path, plan, model, kb):
         return False
 
     diagram_titles = {
-        "context_view": "Diagramma del Contesto",
-        "logical_view": "Diagramma dei Componenti",
-        "deployment_view": "Diagramma del Deployment",
-        "runtime_view": "Diagramma di Sequenza",
-        "security_view": "Diagramma di Sicurezza",
+        "context_view": "Context Diagram",
+        "logical_view": "Component Diagram",
+        "deployment_view": "Deployment Diagram",
+        "runtime_view": "Sequence Diagram",
+        "security_view": "Security Diagram",
     }
 
-    fallback_descriptions = {
-        "context_view": "Il diagramma del contesto rappresenta il sistema e le interazioni con attori esterni.",
-        "logical_view": "Il diagramma mostra la suddivisione del sistema in microservizi indipendenti.",
-        "deployment_view": "Il diagramma illustra la distribuzione dei componenti su nodi infrastrutturali.",
-        "runtime_view": "Il diagramma descrive il flusso temporale delle operazioni principali.",
-        "security_view": "Il diagramma evidenzia le misure di sicurezza e i confini di trust.",
-    }
+    # Fixed order (avoids layout confusion)
+    FIXED_VIEW_ORDER = [
+        "context_view",
+        "logical_view",
+        "deployment_view",
+        "runtime_view",
+        "security_view"
+    ]
+
+    ordered_views = [v for v in FIXED_VIEW_ORDER if v in plan.views]
 
     lines = []
-    lines.append("# Documentazione Architetturale\n")
+    lines.append("# Architectural Documentation\n")
     lines.append("---\n")
 
     # ==========================================================
-    # 1. INTRODUZIONE
+    # 1. Introduction
     # ==========================================================
-
-    lines.append("## 1. Introduzione\n")
+    lines.append("## 1. Introduction\n")
     lines.append(
-        f"La presente documentazione descrive in modo completo l’architettura **{model.id}**, "
-        "progettata per operare in un contesto ad alta variabilità di carico, con requisiti "
-        "stringenti in termini di scalabilità, sicurezza, affidabilità e manutenibilità.\n"
+        f"This document presents the architectural description of **{model.id}**. "
+        "The objective of this documentation is to provide a structured and comprehensive "
+        "overview of the system’s architectural drivers, quality requirements, constraints, "
+        "design trade-offs, and structural views.\n"
     )
     lines.append(
-        "L’obiettivo è fornire una descrizione architetturale strutturata conforme ai principi "
-        "IEEE 1016, includendo requisiti, driver architetturali, alternative considerate, "
-        "trade-off e rappresentazioni UML.\n"
+        "The documentation follows common architectural documentation practices "
+        "(inspired by IEEE 1016), aiming to support both technical understanding "
+        "and design evaluation.\n"
     )
-
-    lines.append("\n---\n")
-
-    # ==========================================================
-    # 2. CONTESTO
-    # ==========================================================
-
-    lines.append("## 2. Contesto e Problema\n")
     lines.append(
-        "Il sistema deve sostenere utenti concorrenti, transazioni sicure e integrazione "
-        "con sistemi esterni garantendo scalabilità, resilienza e disponibilità continua.\n"
+        "The following sections describe the key architectural drivers, quality attribute "
+        "scenarios, constraints, stakeholder concerns, and the evaluation of the selected "
+        "architecture. Finally, UML views are presented to visually represent the system.\n"
     )
 
     lines.append("\n---\n")
 
     # ==========================================================
-    # 3. REQUISITI
+    # 2. Architectural Drivers
     # ==========================================================
+    lines.append("## 2. Architectural Drivers\n")
 
-    lines.append("## 3. Requisiti del Sistema\n")
+    drivers = full_input.get("architectural_drivers", [])
 
-    lines.append("### 3.1 Requisiti Funzionali\n")
+    if not drivers:
+        lines.append("_No architectural drivers available._\n")
+    else:
+        for d in drivers:
+            lines.append(
+                f"### {d.get('id')} (Priority: {d.get('priority')})\n"
+            )
+            lines.append(f"**Description:** {d.get('description')}\n\n")
+            lines.append(f"**Rationale:** {d.get('rationale')}\n\n")
+
+    lines.append("\n---\n")
+
+    # ==========================================================
+    # 3. Quality Attribute Scenarios
+    # ==========================================================
+    lines.append("## 3. Quality Attribute Scenarios\n")
+
+    scenarios = full_input.get("quality_attribute_scenarios", [])
+
+    if not scenarios:
+        lines.append("_No quality attribute scenarios defined._\n")
+    else:
+        for s in scenarios:
+            lines.append(
+                f"### {s.get('attribute')} (Priority: {s.get('priority')})\n"
+            )
+            lines.append(f"- **Stimulus:** {s.get('stimulus')}\n")
+            lines.append(f"- **Environment:** {s.get('environment')}\n")
+            lines.append(f"- **Response:** {s.get('response')}\n")
+            lines.append(f"- **Measure:** {s.get('measure')}\n\n")
+
+    lines.append("\n---\n")
+
+    # ==========================================================
+    # 4. Constraints and Stakeholders
+    # ==========================================================
+    lines.append("## 4. Constraints and Stakeholders\n")
+
+    lines.append("### 4.1 Constraints\n")
+    constraints = full_input.get("constraints", [])
+    if not constraints:
+        lines.append("_No constraints specified._\n")
+    else:
+        for c in constraints:
+            lines.append(f"- {c}\n")
+
+    lines.append("\n### 4.2 Stakeholders\n")
+    stakeholders = full_input.get("stakeholders", [])
+    if not stakeholders:
+        lines.append("_No stakeholders specified._\n")
+    else:
+        for st in stakeholders:
+            lines.append(f"- {st}\n")
+
+    lines.append("\n---\n")
+
+    # ==========================================================
+    # 5. Architecture Evaluation
+    # ==========================================================
+    lines.append("## 5. Architecture Evaluation\n")
+
+    evaluations = full_input.get("architecture_evaluation", [])
+    selected_eval = None
+
+    for e in evaluations:
+        if e.get("architecture_id") == model.id:
+            selected_eval = e
+            break
+
+    if not selected_eval:
+        lines.append("_No evaluation data available for the selected architecture._\n")
+    else:
+        lines.append("### 5.1 Driver Coverage\n")
+        for cov in selected_eval.get("driver_coverage", []):
+            lines.append(
+                f"- **{cov.get('driver_id')}**: {cov.get('satisfied')}\n"
+            )
+
+        lines.append("\n### 5.2 Quality Attribute Trade-offs\n")
+        for t in selected_eval.get("quality_attribute_tradeoffs", []):
+            attrs = ", ".join(t.get("attributes_involved", []))
+            lines.append(f"- **{attrs}**: {t.get('tradeoff_description')}\n")
+
+        lines.append("\n### 5.3 Risks and Limitations\n")
+        for r in selected_eval.get("risks_and_limitations", []):
+            lines.append(
+                f"- (**{r.get('severity')}**) {r.get('description')}\n"
+            )
+
+        lines.append("\n### 5.4 Recommended Improvements\n")
+        for ref in selected_eval.get("recommended_refinements", []):
+            lines.append(f"- {ref.get('description')}\n")
+
+    lines.append("\n---\n")
+
+        # ==========================================================
+    # 6. Architectural Style Rationale
+    # ==========================================================
+    lines.append("## 6. Architectural Style Rationale\n")
     lines.append(
-        "Il sistema deve supportare le seguenti funzionalità principali:\n\n"
-        "- **Gestione del catalogo prodotti**: inserimento, aggiornamento e consultazione prodotti.\n\n"
-        "- **Ricerca e navigazione prodotti**: filtri avanzati e ricerca per parole chiave.\n\n"
-        "- **Gestione del carrello**: aggiunta, modifica e rimozione prodotti.\n\n"
-        "- **Creazione e gestione ordini**: conferma acquisto e tracciamento stato.\n\n"
-        "- **Integrazione con gateway di pagamento**: elaborazione sicura delle transazioni.\n\n"
-        "- **Integrazione con servizi di spedizione**: gestione consegne e aggiornamenti.\n\n"
-        "- **Gestione account utente**: autenticazione, autorizzazione e gestione profilo.\n"
-    )
-
-    lines.append("\n### 3.2 Requisiti Non Funzionali\n")
-    lines.append(
-        "**Performance**: tempo di risposta ridotto per operazioni critiche.\n\n"
-        "**Scalabilità**: supporto a elevati volumi di utenti concorrenti.\n\n"
-        "**Disponibilità**: elevato uptime tramite ridondanza.\n\n"
-        "**Sicurezza**: cifratura dati e controlli di accesso.\n\n"
-        "**Manutenibilità**: evoluzione con impatto minimo.\n"
+        "The selected Microservices Architecture was chosen to address key drivers "
+        "such as scalability, availability, and independent deployment. "
+        "By decomposing the system into autonomous services, each component can evolve, "
+        "scale, and be maintained independently, reducing coupling and improving resilience.\n\n"
+        "This architectural style supports horizontal scalability, fault isolation, "
+        "and technology heterogeneity, which are critical in high-load and cloud-native environments."
     )
 
     lines.append("\n---\n")
 
     # ==========================================================
-    # 4. TRADE-OFF
+    # 7. Key Architectural Decisions
     # ==========================================================
-
-    lines.append("## 4. Trade-Off Architetturali\n")
+    lines.append("## 7. Key Architectural Decisions\n")
     lines.append(
-        "### Performance vs Complessità\n"
-        "Un’architettura distribuita migliora la scalabilità ma aumenta la complessità operativa.\n\n"
-        "### Disponibilità vs Costi\n"
-        "La ridondanza migliora l’affidabilità ma incrementa i costi infrastrutturali.\n\n"
-        "### Sicurezza vs Performance\n"
-        "I controlli di sicurezza introducono overhead ma garantiscono protezione dei dati.\n"
+        "- Adoption of microservices to isolate business capabilities and reduce coupling.\n"
+        "- Independent deployment of services to improve maintainability and evolvability.\n"
+        "- Cloud-native infrastructure to enable elasticity and high availability.\n"
+        "- Clear separation between application logic, infrastructure, and external integrations.\n"
     )
 
-    # ==========================================================
-    # 5. SEZIONE DIAGRAMMI
-    # ==========================================================
-
     lines.append("\n---\n")
-    lines.append("# SEZIONE DIAGRAMMI\n")
 
-    section = 5
+    # ==========================================================
+    # 8. Architectural Views
+    # ==========================================================
+    lines.append("## 8. Architectural Views\n")
 
-    for view in plan.views:
+    view_section_number = 8
+    subsection_counter = 1
 
+    for view in ordered_views:
         diagram_type = kb.view_to_diagram_mapping.get(view)
         title = diagram_titles.get(view, view)
 
-        lines.append("\n---\n")
-        lines.append(f"## {section}. {title}\n")
+        lines.append(f"\n### 8.{subsection_counter} {title}\n")
 
-        # Sempre ordine: Titolo → Immagine → Descrizione
         if diagram_type and ensure_png(diagram_type):
             lines.append(f"![{title}](diagrams/{diagram_type}.png)\n")
         else:
-            lines.append("_Diagramma non disponibile_\n")
+            lines.append("_Diagram not available_\n")
 
         try:
             desc = generate_diagram_description(model, view)
-            if not desc.strip():
-                desc = fallback_descriptions.get(view, "")
+            if desc.strip():
+                lines.append(desc + "\n")
         except Exception:
-            desc = fallback_descriptions.get(view, "")
+            pass
 
-        lines.append(desc + "\n")
+        subsection_counter += 1
 
-        section += 1
 
     # ==========================================================
-    # 6. CONCLUSIONI
+    # 9. Limitations and Future Work
     # ==========================================================
-
-    lines.append("\n---\n")
-    lines.append(f"## {section}. Conclusioni\n")
+    lines.append("\n## 9. Limitations and Future Work\n")
     lines.append(
-        f"L’architettura **{model.id}** rappresenta una soluzione equilibrata tra "
-        "scalabilità, sicurezza e manutenibilità, fornendo una base solida "
-        "per evoluzione futura e deployment distribuito.\n"
+        "The current architectural evaluation is primarily qualitative and based on design reasoning. "
+        "No empirical performance benchmarking or resilience testing has yet been performed. "
+        "Future work should include quantitative validation through load testing, failure injection experiments, "
+        "and distributed consistency verification.\n\n"
+        "Further refinement may involve improving observability mechanisms, introducing automated resilience "
+        "validation pipelines, and refining data management strategies under peak demand scenarios."
+    )
+
+
+    # ==========================================================
+    # 10. Conclusion
+    # ==========================================================
+    lines.append("\n## 10. Conclusion\n")
+    lines.append(
+        f"The **{model.id}** architecture provides a structured and scalable solution aligned with the identified "
+        "architectural drivers. By adopting a microservices-based decomposition, the system enables modular growth, "
+        "independent deployment, and fault isolation.\n\n"
+        "The evaluation highlights a deliberate balance between scalability, availability, maintainability, and "
+        "operational complexity. While the architecture satisfies high-priority requirements, further empirical "
+        "validation and resilience refinement are recommended.\n\n"
+        "Overall, the proposed architectural design establishes a robust foundation for long-term evolution "
+        "in cloud-native, high-demand environments."
     )
 
     # ==========================================================
-    # SCRITTURA MARKDOWN
+    # Write Markdown
     # ==========================================================
-
     output_md.write_text("\n".join(lines), encoding="utf-8")
     print(f"[DOCUMENT BUILT] {output_md}")
 
     # ==========================================================
-    # GENERAZIONE PDF
+    # Generate PDF
     # ==========================================================
-
     try:
         subprocess.run(
             [

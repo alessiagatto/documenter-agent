@@ -1,57 +1,46 @@
 import requests
 import base64
 from typing import Dict
+from PIL import Image
+import io
 
 LM_API_URL = "http://127.0.0.1:1234/v1/chat/completions"
 DEFAULT_MODEL = "minicpm-v-2_6"
 
-PROMPTS = {
-    "sequence_diagram": (
-        "Analyze this UML SEQUENCE diagram image. "
-        "Check: missing/duplicated lifelines, message ordering, arrow direction, readability, spacing, and alignment. "
-        "Return concrete fixes that can be applied in PlantUML (e.g., add actor User, reorder participants, avoid overlaps)."
-    ),
-    "component_diagram": (
-        "Analyze this UML COMPONENT diagram image. "
-        "Check: duplicated components, unclear dependencies, crossing lines, label overlap, inconsistent connector styles, layout readability. "
-        "Return concrete PlantUML-oriented fixes (grouping, direction hints, simplification)."
-    ),
-    "deployment_diagram": (
-        "Analyze this UML DEPLOYMENT diagram image. "
-        "Check: node grouping, component-to-node mapping readability, overlaps, line crossings, label legibility. "
-        "Return concrete PlantUML fixes (group nodes, rearrange, simplify connectors)."
-    ),
-    "context_diagram": (
-        "Analyze this SYSTEM CONTEXT diagram image. "
-        "Check: actors/external systems clarity, missing system boundary, overlaps, label readability, line crossings. "
-        "Return concrete PlantUML fixes (system boundary, actor placement, simplified relations)."
-    ),
-    "security_diagram": (
-        "Analyze this SECURITY diagram image (trust boundaries, threats, countermeasures). "
-        "Check: clarity of boundaries, readability, overlaps, line crossings, consistent notation. "
-        "Return concrete PlantUML fixes (grouping, boundary boxes, clearer labeling)."
-    ),
-}
 
-def encode_image(image_path: str) -> str:
-    with open(image_path, "rb") as f:
-        return base64.b64encode(f.read()).decode("utf-8")
+def encode_and_resize_image(image_path: str, max_size=800) -> str:
+    """
+    Ridimensiona immagine per evitare timeout Vision.
+    Mantiene proporzioni e comprime PNG.
+    """
+    img = Image.open(image_path)
+
+    img.thumbnail((max_size, max_size))
+
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG", optimize=True)
+    buffer.seek(0)
+
+    return base64.b64encode(buffer.read()).decode("utf-8")
+
 
 def analyze_diagram(image_path, diagram_type="generic"):
-    image_base64 = encode_image(image_path)
+
+    # Ridimensionamento automatico
+    image_base64 = encode_and_resize_image(image_path)
 
     prompt_map = {
-        "sequence": "Analyze this UML SEQUENCE diagram. Focus on participant alignment, arrow direction, lifelines, spacing and readability.",
-        "context": "Analyze this UML CONTEXT diagram. Focus on system boundary clarity, actor placement and external interactions.",
-        "component": "Analyze this UML COMPONENT diagram. Focus on layout symmetry, dependency clarity and grouping.",
-        "deployment": "Analyze this UML DEPLOYMENT diagram. Focus on node separation, containment clarity and infrastructure readability.",
-        "security": "Analyze this UML SECURITY diagram. Focus on trust boundaries, actor placement and security annotations."
+        "sequence": "Analyze this UML SEQUENCE diagram. Focus only on layout and alignment issues. Do NOT modify semantic structure.",
+        "context": "Analyze this UML CONTEXT diagram. Focus only on layout and visual clarity.",
+        "component": "Analyze this UML COMPONENT diagram. Focus only on visual grouping and connector readability.",
+        "deployment": "Analyze this UML DEPLOYMENT diagram. Focus only on node layout clarity.",
+        "security": "Analyze this UML SECURITY diagram. Focus only on boundary readability and label clarity."
     }
 
-    prompt = prompt_map.get(diagram_type, "Analyze this UML diagram.")
+    prompt = prompt_map.get(diagram_type, "Analyze this UML diagram layout only.")
 
     payload = {
-        "model": "minicpm-v-2_6",
+        "model": DEFAULT_MODEL,
         "messages": [
             {
                 "role": "user",
@@ -66,12 +55,24 @@ def analyze_diagram(image_path, diagram_type="generic"):
                 ]
             }
         ],
-        "temperature": 0.2
+        "temperature": 0.1,
+        "max_tokens": 500
     }
 
     try:
-        response = requests.post(LM_API_URL, json=payload, timeout=120)
-        return response.json()
+        response = requests.post(
+            LM_API_URL,
+            json=payload,
+            timeout=60  #  timeout ridotto ma più realistico
+        )
+
+        if response.status_code == 200:
+            return response.json()
+
+        return {
+            "error": "bad_status_code",
+            "status": response.status_code
+        }
 
     except Exception as e:
         return {

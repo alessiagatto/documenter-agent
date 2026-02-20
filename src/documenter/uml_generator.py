@@ -123,25 +123,23 @@ def generate_context_diagram(model: ArchitectureModel, output_path: Path):
 def generate_sequence_diagram(model, output_file, rules=None):
     """
     Genera un diagramma di sequenza.
-    Garantisce sempre la presenza dell'attore User.
+    Applica eventuali regole apprese dalla KB.
     """
-
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
     components = model.get_logical_components()
     connectors = model.get_logical_connectors()
 
+    rules = rules or []
+
     with open(output_file, "w", encoding="utf-8") as f:
         f.write("@startuml\n\n")
 
-        # 👇 USER SEMPRE PRESENTE
-        f.write('actor "User" as User\n\n')
+        # ✅ Applica regola self-evolving: se presente, inserisci User
+        if "require_user_actor" in rules:
+            f.write('actor "User" as User\n\n')
 
-        # Regole layout
-        if rules and rules.get("enforce_left_to_right_alignment", False):
-            f.write("left to right direction\n\n")
-
-        # Participant ordinati
+        # Participant ordinati e unici
         written = set()
         for comp in components:
             alias = comp.id.replace(" ", "")
@@ -158,6 +156,7 @@ def generate_sequence_diagram(model, output_file, rules=None):
             f.write(f"{source} -> {target} : {conn.type}\n")
 
         f.write("\n@enduml\n")
+
 
 # =========================
 # SEQUENCE REGENERATION (VISION)
@@ -179,7 +178,7 @@ def regenerate_sequence_with_feedback(model, feedback: str, output_path):
         f.write("@startuml\n\n")
 
         # 👇 1️⃣ USER SEMPRE PRESENTE
-        f.write('actor "User" as User\n\n')
+        f.write("actor User\n\n")
 
         # 👇 2️⃣ Participant ordinati e unici
         written = set()

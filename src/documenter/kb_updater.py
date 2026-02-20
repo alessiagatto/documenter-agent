@@ -1,30 +1,26 @@
-import json
-from pathlib import Path
-
-def update_kb_from_feedback(kb_path: Path, diagram_type: str, vision_text: str):
-
-    if not kb_path.exists():
-        return
+def update_kb_from_feedback(kb_path, diagram_type, new_rules):
+    """
+    Aggiorna la Knowledge Base persistendo nuove regole strutturali.
+    """
+    import json
 
     with open(kb_path, "r", encoding="utf-8") as f:
-        kb = json.load(f)
+        data = json.load(f)
 
-    rules = kb.setdefault("diagram_quality_rules", {})
-    diagram_rules = rules.setdefault(diagram_type, {})
+    if "learned_rules" not in data:
+        data["learned_rules"] = {}
 
-    text = vision_text.lower()
+    updated = False
 
-    if "duplicate" in text:
-        diagram_rules["no_duplicate_elements"] = True
+    for rule in new_rules:
+        if rule not in data["learned_rules"]:
+            data["learned_rules"][rule] = {
+                "diagram_type": diagram_type,
+                "active": True
+            }
+            updated = True
 
-    if "left to right" in text:
-        diagram_rules["left_to_right_order"] = True
-
-    if "spacing" in text:
-        diagram_rules["increase_spacing"] = True
-
-    if "alignment" in text:
-        diagram_rules["improve_alignment"] = True
-
-    with open(kb_path, "w", encoding="utf-8") as f:
-        json.dump(kb, f, indent=2)
+    if updated:
+        with open(kb_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4)
+        print("[KB UPDATED] Persisted new structural rules.")
